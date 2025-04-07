@@ -1,0 +1,159 @@
+# API keys
+browserbase_api_key: "YOUR_API_KEY_HERE"
+
+# Restaurant details
+restaurant_name: "Bowens Island Restaurant"
+tripadvisor_url: "https://www.tripadvisor.com/Restaurant_Review-g54171-d436679-Reviews-Bowens_Island_Restaurant-Charleston_South_Carolina.html"
+yelp_url: "https://www.yelp.com/biz/bowens-island-restaurant-charleston-3"
+google_place_id: "ChIJ6f1Hm-x-9ogRXCQlTnRq3vc"  # Replace with actual Google Place ID
+
+# Scraping parameters
+date_range:
+  start: "2024-06-01"
+  end: "2025-04-30"
+max_reviews_per_platform: 500  # Set to 0 for unlimited
+timeout_seconds: 60
+retry_attempts: 3
+scroll_pause_time: 1.5  # Seconds to pause between scrolls
+
+# Review categorization
+categories:
+  - Food Quality
+  - Wait Times
+  - Pricing
+  - Service
+  - Environment/Atmosphere
+  - Product Availability
+  - Cleanliness
+  - Other
+
+category_keywords:
+  Food Quality:
+    - "food"
+    - "dish"
+    - "meal"
+    - "taste"
+    - "flavor"
+    - "fresh"
+    - "cooked"
+    - "fried"
+    - "shrimp"
+    - "oyster"
+    - "seafood"
+    - "crab"
+    - "fish"
+    - "hush puppy"
+    - "frogmore"
+    - "delicious"
+    - "bland"
+    - "salty"
+    - "undercooked"
+    - "overcooked"
+    - "portion"
+    - "cold"
+    - "hot"
+  
+  Wait Times:
+    - "wait"
+    - "time"
+    - "long"
+    - "slow"
+    - "quick"
+    - "fast"
+    - "delay"
+    - "minute"
+    - "hour"
+    - "promptly"
+    - "forever"
+    - "waited"
+  
+  Pricing:
+    - "price"
+    - "expensive"
+    - "cheap"
+    - "cost"
+    - "worth"
+    - "value"
+    - "overpriced"
+    - "affordable"
+    - "$"
+    - "money"
+  
+  Service:
+    - "service"
+    - "staff"
+    - "server"
+    - "waiter"
+    - "waitress"
+    - "bartender"
+    - "friendly"
+    - "rude"
+    - "attentive"
+    - "helpful"
+    - "manager"
+    - "owner"
+  
+  Environment/Atmosphere:
+    - "atmosphere"
+    - "ambiance"
+    - "view"
+    - "scenery"
+    - "sunset"
+    - "noise"
+    - "loud"
+    - "quiet"
+    - "rustic"
+    - "charming"
+    - "comfortable"
+    - "cold"
+    - "hot"
+    - "temperature"
+    - "decor"
+    - "seating"
+    - "table"
+    - "outdoor"
+    - "indoor"
+    - "patio"
+    - "marsh"
+    - "water"
+  
+  Product Availability:
+    - "out of"
+    - "sold out"
+    - "unavailable"
+    - "menu"
+    - "selection"
+    - "options"
+    - "available"
+    - "seasonal"
+  
+  Cleanliness:
+    - "clean"
+    - "dirty"
+    - "bathroom"
+    - "restroom"
+    - "sanitary"
+    - "hygiene"
+    - "mess"
+    - "table"
+    - "floor"
+    - "wiped"
+
+# Sentiment analysis
+sentiment_thresholds:
+  positive_threshold: 0.5  # Reviews with sentiment score > this value are considered positive
+
+# Export settings
+excel_file_path: "Bowens_Island_Reviews.xlsx"
+excel_sheet_names:
+  all_reviews: "All Reviews"
+  tripadvisor: "TripAdvisor"
+  yelp: "Yelp"
+  google: "Google"
+  summary: "Summary"
+
+# Optional proxy configuration
+use_proxy: false
+proxy:
+  http: ""
+  https: ""
