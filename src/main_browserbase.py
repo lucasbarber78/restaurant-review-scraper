@@ -26,6 +26,7 @@ from scrapers.tripadvisor_browserbase_scraper import TripAdvisorBrowserbaseScrap
 from scrapers.google_browserbase_scraper import GoogleBrowserbaseScraper
 from review_categorizer import ReviewCategorizer
 from excel_exporter import ExcelExporter
+from utils.date_range_utils import prompt_for_date_range
 
 # Set up logging
 logging.basicConfig(
@@ -244,6 +245,8 @@ def main() -> None:
                         help='Maximum number of reviews to scrape per platform')
     parser.add_argument('--platforms', '-p', nargs='+', choices=['tripadvisor', 'yelp', 'google', 'all'],
                         default=['all'], help='Platforms to scrape')
+    parser.add_argument('--no-prompt', '-n', action='store_true', 
+                        help='Skip date range prompting and use config file values')
     args = parser.parse_args()
     
     # Load configuration
@@ -252,6 +255,27 @@ def main() -> None:
     except Exception as e:
         logger.error(f"Failed to load configuration: {e}")
         sys.exit(1)
+    
+    # Get Excel file path from config for date range determination
+    excel_file_path = config.get('excel_file_path', 'reviews.xlsx')
+    
+    # Prompt for date range unless --no-prompt flag is used
+    if not args.no_prompt:
+        try:
+            start_date, end_date = prompt_for_date_range(excel_file_path)
+            
+            # Update config with user-selected date range
+            if 'date_range' not in config:
+                config['date_range'] = {}
+            
+            config['date_range']['start'] = start_date.strftime('%Y-%m-%d')
+            config['date_range']['end'] = end_date.strftime('%Y-%m-%d')
+            
+            logger.info(f"Using date range from prompt: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        except Exception as e:
+            logger.warning(f"Error during date range prompting: {e}. Using values from config file.")
+    else:
+        logger.info("Skipping date range prompt as requested. Using values from config file.")
     
     # Determine which platforms to scrape
     platforms_to_scrape = args.platforms
