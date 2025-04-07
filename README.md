@@ -2,6 +2,24 @@
 
 A comprehensive solution for scraping reviews from TripAdvisor, Yelp, and Google Reviews and exporting them to Excel.
 
+## Project Objectives
+
+This project aims to solve the following challenges for restaurant owners and managers:
+
+1. **Comprehensive Review Collection**: Automatically gather customer reviews across multiple platforms (TripAdvisor, Yelp, and Google Reviews) to ensure no valuable feedback is missed.
+
+2. **Chronological Analysis**: Filter reviews by specific date ranges to analyze trends, track improvement efforts, and measure the impact of operational changes over time.
+
+3. **Automated Categorization**: Automatically classify reviews into meaningful categories (Food Quality, Wait Times, Pricing, Service, Environment/Atmosphere, Product Availability, etc.) to identify specific areas of strength and weakness.
+
+4. **Sentiment Analysis**: Determine whether reviews are positive or negative to quickly gauge overall customer satisfaction and identify problem areas.
+
+5. **Consolidated Reporting**: Export all review data to a well-organized Excel file with multiple sheets for easy analysis, sharing, and presentation to stakeholders.
+
+6. **Trend Identification**: Identify emerging issues or consistent problems by analyzing patterns in customer feedback across time periods and platforms.
+
+7. **Operational Decision Support**: Provide actionable insights to guide operational improvements, staff training, menu adjustments, and other business decisions.
+
 ## Features
 
 - Scrape reviews from multiple platforms:
@@ -50,7 +68,7 @@ browserbase_api_key: "YOUR_API_KEY_HERE"
 restaurant_name: "Bowens Island Restaurant"
 tripadvisor_url: "https://www.tripadvisor.com/Restaurant_Review-g54171-d436679-Reviews-Bowens_Island_Restaurant-Charleston_South_Carolina.html"
 yelp_url: "https://www.yelp.com/biz/bowens-island-restaurant-charleston-3"
-google_place_id: "ChIJXXXXXXXXXXXXXXXXXX"  # Replace with actual Google Place ID
+google_place_id: "ChIJ6f1Hm-x-9ogRXCQlTnRq3vc"  # Replace with actual Google Place ID
 
 # Scraping parameters
 date_range:
@@ -81,6 +99,57 @@ python src/yelp_scraper.py
 # Google Reviews only
 python src/google_scraper.py
 ```
+
+## Key Use Cases
+
+### 1. Monthly Review Analysis
+
+Restaurant managers can run the scraper at the end of each month to collect all reviews from the past 30 days. The generated Excel report provides a comprehensive view of customer feedback, helping identify:
+
+- Recent trends in customer satisfaction
+- Emerging issues that need immediate attention
+- The impact of recent operational changes or promotions
+
+### 2. Competitive Analysis
+
+By modifying the configuration to target competitor restaurants, the tool can be used to gather and analyze competitive intelligence:
+
+- Track competitor ratings and sentiment over time
+- Identify competitors' strengths and weaknesses
+- Discover operational best practices mentioned in positive reviews
+- Learn from competitors' mistakes mentioned in negative reviews
+
+### 3. Staff Training and Performance Evaluation
+
+Reviews often mention specific staff interactions. By analyzing service-related reviews:
+
+- Identify training opportunities for staff
+- Recognize and reward excellent service mentioned in reviews
+- Address recurring service issues
+
+### 4. Menu Development
+
+Food quality reviews provide valuable insights for menu development:
+
+- Identify most praised and criticized dishes
+- Discover customer preferences and expectations
+- Guide menu updates and pricing strategies
+
+### 5. Marketing and Reputation Management
+
+The compiled review data supports marketing and reputation management:
+
+- Identify authentic positive quotes for promotional materials
+- Track the effectiveness of reputation management efforts
+- Develop targeted responses to common criticisms
+
+### 6. Operational Improvements
+
+Categorized reviews help prioritize operational improvements:
+
+- Focus on categories with the highest number of negative reviews
+- Track improvement over time after implementing changes
+- Identify seasonal patterns in customer satisfaction
 
 ## Project Structure
 
@@ -114,11 +183,40 @@ restaurant-review-scraper/
 4. Processes and categorizes the reviews
 5. Exports the data to an Excel file
 
+## Expected Output
+
+The Excel output file includes several sheets:
+
+1. **All Reviews**: Combined list of all reviews from all platforms, sorted by date (newest first)
+2. **TripAdvisor**: Reviews from TripAdvisor only
+3. **Yelp**: Reviews from Yelp only
+4. **Google**: Reviews from Google only
+5. **Summary**: Statistical breakdown of reviews by platform, rating, category, and sentiment
+
+## Analysis Techniques
+
+The scraper uses several techniques to analyze reviews:
+
+1. **Keyword Matching**: Reviews are categorized based on the presence of specific keywords (configured in config.yaml)
+2. **Sentiment Analysis**: A basic sentiment analysis algorithm detects positive and negative language, accounting for negation
+3. **Date Parsing**: Complex date expressions (e.g., "2 weeks ago") are converted to actual dates
+4. **Statistical Aggregation**: Review counts and averages are calculated for the summary report
+
 ## Limitations
 
 - Be aware of rate limits and terms of service for each platform
 - Google Reviews requires additional authentication
 - Review categorization is based on keyword matching and may require refinement
+- Websites may change their HTML structure, requiring scraper updates
+
+## Troubleshooting
+
+Common issues and solutions:
+
+- **Session Limits**: If you encounter session limit errors, try reducing the `max_reviews_per_platform` setting
+- **Selector Errors**: If the scraper fails to find elements, it may need updates to match website changes
+- **Date Parsing Errors**: For complex date formats, update the date parsing logic in date_utils.py
+- **Memory Issues**: For very large datasets, try scraping one platform at a time
 
 ## License
 
