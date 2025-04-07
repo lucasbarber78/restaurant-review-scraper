@@ -2,26 +2,53 @@
 # This is a sample configuration file for the Browserbase version
 
 # API keys
+# Required for browser automation with the Browserbase cloud service
+# Sign up at browserbase.com to obtain your API key
 browserbase_api_key: "YOUR_BROWSERBASE_API_KEY_HERE"
 
 # Restaurant details
+# The name of your restaurant (used in logs and reports)
 restaurant_name: "Bowens Island Restaurant"
+
+# URL to your restaurant's TripAdvisor page
+# Format: https://www.tripadvisor.com/Restaurant_Review-[location_code]-[restaurant_id]-Reviews-[restaurant_name]-[location].html
 tripadvisor_url: "https://www.tripadvisor.com/Restaurant_Review-g54171-d436679-Reviews-Bowens_Island_Restaurant-Charleston_South_Carolina.html"
+
+# URL to your restaurant's Yelp page
+# Format: https://www.yelp.com/biz/[restaurant-name-location]
 yelp_url: "https://www.yelp.com/biz/bowens-island-restaurant-charleston-3"
-google_place_id: "ChIJ6f1Hm-x-9ogRXCQlTnRq3vc"  # Replace with actual Google Place ID
+
+# Google Place ID for your restaurant
+# Find your Place ID at: https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder
+google_place_id: "ChIJ6f1Hm-x-9ogRXCQlTnRq3vc"
 
 # Scraping parameters
+# Date range settings for filtering reviews
+# Note: These values can be overridden via the interactive prompt when running the scraper
+# The scraper will use smart defaults based on your existing data if you use the prompt
 date_range:
+  # Start date in YYYY-MM-DD format (inclusive)
+  # Reviews before this date will be excluded
   start: "2023-01-01"
+  
+  # End date in YYYY-MM-DD format (inclusive)
+  # Reviews after this date will be excluded
   end: "2025-04-01"
 
-# Maximum reviews to scrape per platform
+# Maximum number of reviews to scrape per platform
+# Higher values may increase scraping time and risk of being rate-limited
+# Recommended: 50-100 for regular use, 200-300 for initial scraping
 max_reviews_per_platform: 100
 
 # Export settings
+# Path to the Excel file where reviews will be saved
+# Relative to the script's directory or absolute path
+# This file will be used to determine smart date defaults for incremental scraping
 excel_file_path: "reviews_browserbase.xlsx"
 
 # Review categorization keywords
+# These keywords are used to classify reviews into categories
+# You can add or remove keywords to customize categorization for your restaurant
 categories:
   # Food Quality
   food_quality:
@@ -139,7 +166,9 @@ categories:
     - "map"
 
 # Sentiment analysis settings
+# These settings control how sentiment (positive/negative) is determined for reviews
 sentiment:
+  # Words that indicate positive sentiment
   positive_words:
     - "good"
     - "great"
@@ -173,6 +202,7 @@ sentiment:
     - "tasty"
     - "nice"
     
+  # Words that indicate negative sentiment
   negative_words:
     - "bad"
     - "poor"
@@ -210,6 +240,7 @@ sentiment:
     - "greasy"
     
   # Words that negate sentiment (e.g., "not good" is negative)
+  # This allows accurate sentiment detection even with negations
   negation_words:
     - "not"
     - "isn't"
