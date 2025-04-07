@@ -37,6 +37,7 @@ The project follows a modular design with clear separation of concerns:
 3. **Data Processing**
    - `review_categorizer.py` (text categorization and sentiment analysis)
    - `date_utils.py` (date parsing and normalization)
+   - `date_range_utils.py` (smart date range determination and user prompting)
 
 4. **Data Export**
    - `excel_exporter.py` (structured data export to Excel)
@@ -54,6 +55,8 @@ The project follows these key design principles:
 3. **Configurability**: All behavior can be adjusted through the configuration file.
 4. **Error Resilience**: Robust error handling to deal with inconsistencies in scraped data.
 5. **Modularity**: Easy to extend with new platforms or features.
+6. **Smart Defaults**: The system provides intelligent default values based on context.
+7. **User Interaction**: Interactive features are optional and have non-interactive fallbacks.
 
 ## Browser Automation Approaches
 
@@ -122,6 +125,68 @@ In future versions, this could be enhanced with:
 - More sophisticated NLP techniques (embedding models, etc.)
 - Fine-tuned restaurant-specific sentiment models
 
+## Date Range Handling
+
+The date range handling system consists of two main components:
+
+1. **Date Parsing (`date_utils.py`)**: 
+   - Converts various date formats to standardized datetime objects
+   - Handles relative dates ("2 days ago", "last week", etc.)
+   - Normalizes across different platforms' date formats
+
+2. **Smart Date Range Detection (`date_range_utils.py`)**:
+   - Determines optimal date ranges based on existing data
+   - Provides interactive prompting for user input
+   - Implements incremental scraping by detecting the most recent review date
+
+### Incremental Scraping Implementation
+
+The system implements incremental scraping through these key functions:
+
+- **`get_smart_date_range(excel_file_path)`**: 
+  ```python
+  def get_smart_date_range(excel_file_path: str) -> Tuple[datetime, datetime]:
+      """
+      Determine smart defaults for date range based on existing data and current date.
+      
+      Args:
+          excel_file_path (str): Path to the Excel file with existing reviews.
+          
+      Returns:
+          tuple: (start_date, end_date) as datetime objects with smart defaults.
+      """
+  ```
+  This function:
+  - Checks for the existence of the Excel file
+  - Reads the "All Reviews" sheet if present
+  - Identifies the date column
+  - Finds the most recent review date
+  - Sets default start date to the day after the latest review
+  - Sets default end date to yesterday
+  - Falls back to 30 days ago if no existing data is found
+
+- **`prompt_for_date_range(excel_file_path)`**:
+  ```python
+  def prompt_for_date_range(excel_file_path: str) -> Tuple[datetime, datetime]:
+      """
+      Prompt the user for date range with smart defaults.
+      
+      Args:
+          excel_file_path (str): Path to the Excel file with existing reviews.
+          
+      Returns:
+          tuple: (start_date, end_date) as datetime objects.
+      """
+  ```
+  This function:
+  - Gets smart defaults from `get_smart_date_range`
+  - Presents these defaults to the user
+  - Accepts user input or uses defaults if none provided
+  - Validates the input (format, logical range)
+  - Returns the configured date range
+
+These components work together to provide an intelligent date range selection system that makes incremental scraping convenient and automatic.
+
 ## Error Handling Strategy
 
 The project implements a multi-layered error handling approach:
@@ -140,6 +205,47 @@ Developers can extend the system in several ways:
 3. **Alternative Exports**: Add new exporters (JSON, database, etc.)
 4. **Visualization**: Add data visualization and dashboards
 5. **Scheduling**: Implement periodic scraping and trend analysis
+6. **User Interface**: Develop a web interface or GUI
+7. **Better Date Handling**: Extend date parsing for additional formats
+
+### Adding a New Scraper
+
+To add a new review platform scraper:
+
+1. Create a new file in `src/scrapers/` named `[platform]_browserbase_scraper.py`
+2. Implement a class that follows the pattern of existing scrapers:
+   ```python
+   class NewPlatformBrowserbaseScraper:
+       def __init__(self, api_key=None, config_path=None):
+           self.scraper = BrowserbaseScraper(api_key, config_path)
+           self.config = self.scraper.config
+           self.selectors = {
+               # Platform-specific selectors
+           }
+       
+       def scrape_reviews(self, url=None, max_reviews=100):
+           # Implementation
+           pass
+   ```
+3. Update `main_browserbase.py` to include your new platform:
+   - Import the new scraper
+   - Add a scraping function
+   - Update the command-line arguments
+   - Add to the platforms dictionary
+
+### Improving Date Range Handling
+
+To extend the date range functionality:
+
+1. Enhance `date_range_utils.py` with additional features:
+   - Calendar-based UI selection
+   - Automatic scheduling
+   - Custom date range presets (last month, last quarter, etc.)
+
+2. Add functions to provide more context about the date range:
+   - Statistics about existing data
+   - Visualization of review distribution over time
+   - Preview of potential new review count
 
 ## Performance Considerations
 
@@ -147,6 +253,7 @@ Developers can extend the system in several ways:
 - The code uses appropriate timeouts and retries
 - Parallel scraping of different platforms could improve performance
 - Rate limiting is essential to avoid being blocked
+- Smart date ranges can significantly reduce unnecessary scraping
 
 ## Testing Strategy
 
@@ -154,10 +261,12 @@ The project includes unit tests for:
 - Date parsing logic
 - Categorization algorithms
 - Excel export functionality
+- Date range utilities
 
 Integration tests cover:
 - End-to-end scraping workflows (with reduced review counts)
 - Configuration loading and validation
+- Excel file processing
 
 Tests use mock responses for network operations to ensure reliability.
 
@@ -167,6 +276,7 @@ Tests use mock responses for network operations to ensure reliability.
 - No personal data is collected beyond what's publicly available
 - Network requests use HTTPS
 - Input validation prevents injection attacks
+- Excel files are validated before reading to prevent formula injection
 
 ## Licensing and Legal Considerations
 
