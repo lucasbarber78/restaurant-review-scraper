@@ -1,0 +1,232 @@
+# Restaurant Review Scraper Configuration
+# This is a sample configuration file for the Browserbase version
+
+# API keys
+browserbase_api_key: "YOUR_BROWSERBASE_API_KEY_HERE"
+
+# Restaurant details
+restaurant_name: "Bowens Island Restaurant"
+tripadvisor_url: "https://www.tripadvisor.com/Restaurant_Review-g54171-d436679-Reviews-Bowens_Island_Restaurant-Charleston_South_Carolina.html"
+yelp_url: "https://www.yelp.com/biz/bowens-island-restaurant-charleston-3"
+google_place_id: "ChIJ6f1Hm-x-9ogRXCQlTnRq3vc"  # Replace with actual Google Place ID
+
+# Scraping parameters
+date_range:
+  start: "2023-01-01"
+  end: "2025-04-01"
+
+# Maximum reviews to scrape per platform
+max_reviews_per_platform: 100
+
+# Export settings
+excel_file_path: "reviews_browserbase.xlsx"
+
+# Review categorization keywords
+categories:
+  # Food Quality
+  food_quality:
+    - "food"
+    - "dish"
+    - "meal"
+    - "taste"
+    - "flavor"
+    - "delicious"
+    - "menu"
+    - "portions"
+    - "chef"
+    - "fresh"
+    - "stale"
+    - "overcooked"
+    - "undercooked"
+    - "bland"
+    
+  # Service Quality
+  service:
+    - "service"
+    - "staff"
+    - "waiter"
+    - "waitress"
+    - "server"
+    - "manager"
+    - "host"
+    - "hostess"
+    - "attentive"
+    - "friendly"
+    - "rude"
+    - "slow"
+    - "quick"
+    
+  # Wait Times
+  wait_times:
+    - "wait"
+    - "waited"
+    - "line"
+    - "queue"
+    - "reservation"
+    - "minutes"
+    - "hours"
+    - "delay"
+    - "slow"
+    - "fast"
+    - "prompt"
+    
+  # Pricing
+  pricing:
+    - "price"
+    - "expensive"
+    - "cheap"
+    - "affordable"
+    - "overpriced"
+    - "value"
+    - "worth"
+    - "cost"
+    - "budget"
+    - "bill"
+    - "charge"
+    - "dollar"
+    - "$"
+    
+  # Environment/Atmosphere
+  atmosphere:
+    - "atmosphere"
+    - "ambiance"
+    - "ambience"
+    - "decor"
+    - "interior"
+    - "design"
+    - "lighting"
+    - "music"
+    - "noisy"
+    - "quiet"
+    - "clean"
+    - "dirty"
+    - "comfortable"
+    - "seating"
+    - "chairs"
+    - "tables"
+    - "view"
+    
+  # Cleanliness
+  cleanliness:
+    - "clean"
+    - "dirty"
+    - "hygiene"
+    - "sanitary"
+    - "unsanitary"
+    - "spotless"
+    - "filthy"
+    - "bathroom"
+    - "restroom"
+    - "toilet"
+    - "mess"
+    - "dust"
+    - "floor"
+    - "sticky"
+    
+  # Location/Accessibility
+  location:
+    - "location"
+    - "parking"
+    - "access"
+    - "accessible"
+    - "drive"
+    - "walk"
+    - "neighborhood"
+    - "area"
+    - "downtown"
+    - "directions"
+    - "find"
+    - "map"
+
+# Sentiment analysis settings
+sentiment:
+  positive_words:
+    - "good"
+    - "great"
+    - "excellent"
+    - "amazing"
+    - "wonderful"
+    - "superb"
+    - "perfect"
+    - "delicious"
+    - "fantastic"
+    - "friendly"
+    - "attentive"
+    - "recommend"
+    - "best"
+    - "awesome"
+    - "love"
+    - "enjoy"
+    - "pleasant"
+    - "satisfied"
+    - "lovely"
+    - "favorite"
+    - "clean"
+    - "beautiful"
+    - "fresh"
+    - "helpful"
+    - "impressive"
+    - "outstanding"
+    - "prompt"
+    - "quick"
+    - "worth"
+    - "tasty"
+    - "nice"
+    
+  negative_words:
+    - "bad"
+    - "poor"
+    - "terrible"
+    - "horrible"
+    - "disappointing"
+    - "awful"
+    - "mediocre"
+    - "rude"
+    - "slow"
+    - "expensive"
+    - "overpriced"
+    - "dirty"
+    - "stale"
+    - "cold"
+    - "bland"
+    - "unpleasant"
+    - "avoid"
+    - "complaint"
+    - "worse"
+    - "worst"
+    - "disgusting"
+    - "never"
+    - "unfriendly"
+    - "unhelpful"
+    - "mess"
+    - "inattentive"
+    - "ignored"
+    - "filthy"
+    - "mistake"
+    - "wrong"
+    - "undercooked"
+    - "overcooked"
+    - "tough"
+    - "greasy"
+    
+  # Words that negate sentiment (e.g., "not good" is negative)
+  negation_words:
+    - "not"
+    - "isn't"
+    - "aren't"
+    - "wasn't"
+    - "weren't"
+    - "don't"
+    - "doesn't"
+    - "didn't"
+    - "won't"
+    - "wouldn't"
+    - "haven't"
+    - "hasn't"
+    - "hadn't"
+    - "never"
+    - "no"
+    - "none"
+    - "nothing"
+    - "neither"
+    - "nor"
