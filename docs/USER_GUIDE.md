@@ -1,0 +1,264 @@
+# Restaurant Review Scraper: User Guide
+
+This guide provides practical instructions for restaurant owners, managers, and marketers who want to use the Restaurant Review Scraper to gather and analyze customer feedback from multiple platforms.
+
+## Getting Started
+
+### Prerequisites
+
+Before using the Restaurant Review Scraper, you'll need:
+
+1. **Python 3.8 or higher** installed on your computer
+2. **Browserbase API key** (for the Browserbase version)
+3. **URLs/IDs for your restaurant** on TripAdvisor, Yelp, and Google Maps
+
+### Installation
+
+#### Option 1: Browserbase Version (Recommended)
+
+1. Clone or download the repository:
+   ```bash
+   git clone https://github.com/lucasbarber78/restaurant-review-scraper.git
+   cd restaurant-review-scraper
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements_browserbase.txt
+   ```
+
+3. Copy the sample configuration file:
+   ```bash
+   cp config_browserbase_sample.yaml config.yaml
+   ```
+
+4. Edit the configuration file with your information (see Configuration section below).
+
+#### Option 2: Local Browser Version (Legacy)
+
+1. Clone or download the repository:
+   ```bash
+   git clone https://github.com/lucasbarber78/restaurant-review-scraper.git
+   cd restaurant-review-scraper
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Copy the sample configuration file:
+   ```bash
+   cp config_sample.yaml config.yaml
+   ```
+
+4. Edit the configuration file with your information.
+
+## Configuration
+
+Open the `config.yaml` file in a text editor and fill in:
+
+### Restaurant Information
+
+```yaml
+restaurant_name: "Your Restaurant Name"
+tripadvisor_url: "https://www.tripadvisor.com/Restaurant_Review-g12345-d67890-Reviews-Your_Restaurant-City_State.html"
+yelp_url: "https://www.yelp.com/biz/your-restaurant-city"
+google_place_id: "ChIJ1234567890abcdefg"
+```
+
+To find your Google Place ID:
+1. Go to [Google's Place ID Finder](https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder)
+2. Search for your restaurant
+3. Copy the Place ID that appears
+
+### Date Range
+
+```yaml
+date_range:
+  start: "2023-01-01"
+  end: "2025-04-01"
+```
+
+This will only collect reviews within this date range. Use YYYY-MM-DD format.
+
+### API Keys (Browserbase Version)
+
+```yaml
+browserbase_api_key: "your_api_key_here"
+```
+
+### Export Settings
+
+```yaml
+excel_file_path: "my_restaurant_reviews.xlsx"
+```
+
+## Basic Usage
+
+### Running the Scraper
+
+From the main directory, run:
+
+#### Browserbase Version (Recommended)
+```bash
+python src/main_browserbase.py
+```
+
+#### Legacy Version
+```bash
+python src/main.py
+```
+
+### Command Line Options
+
+Customize your scraping with these options:
+
+```bash
+# Scrape only specific platforms
+python src/main_browserbase.py --platforms tripadvisor yelp
+
+# Set maximum number of reviews per platform
+python src/main_browserbase.py --max-reviews 50
+
+# Use a custom configuration file
+python src/main_browserbase.py --config my_custom_config.yaml
+```
+
+## Understanding the Results
+
+The scraper generates an Excel file with multiple sheets:
+
+1. **All Reviews**: Combined list of all reviews, sorted by date
+2. **TripAdvisor**: Reviews from TripAdvisor only
+3. **Yelp**: Reviews from Yelp only
+4. **Google**: Reviews from Google only
+5. **Summary**: Statistical breakdown with charts
+
+### Review Data
+
+Each review includes:
+- **Platform**: Source of the review (TripAdvisor, Yelp, or Google)
+- **Date**: When the review was posted
+- **Reviewer Name**: Name of the reviewer
+- **Rating**: Star rating (1-5)
+- **Text**: Full review text
+- **Category**: Automatically classified category
+- **Sentiment**: Positive or negative
+- **URL**: Link to the original review
+
+### Automatic Categorization
+
+Reviews are automatically categorized into these areas:
+- Food Quality
+- Service
+- Wait Times
+- Pricing
+- Atmosphere
+- Cleanliness
+- Location/Accessibility
+
+## Practical Use Cases
+
+### Monthly Performance Tracking
+
+1. Run the scraper at the end of each month
+2. Compare current month's ratings and categories to previous months
+3. Identify trends and changes in customer satisfaction
+
+Example command:
+```bash
+python src/main_browserbase.py --max-reviews 200
+```
+
+### Post-Change Analysis
+
+1. Update the date range in `config.yaml` to a period after making operational changes
+2. Compare results to reviews from before the changes
+3. Determine if the changes had the desired impact
+
+Example date range:
+```yaml
+date_range:
+  start: "2024-01-15"  # Date when changes were implemented
+  end: "2024-04-01"
+```
+
+### Competitor Analysis
+
+1. Create a new config file (e.g., `competitor_config.yaml`)
+2. Replace your restaurant's URLs with your competitor's
+3. Run the scraper with the custom config
+4. Compare results to understand your competitor's strengths and weaknesses
+
+Example command:
+```bash
+python src/main_browserbase.py --config competitor_config.yaml
+```
+
+### Staff Training Support
+
+1. Filter the Excel file to show only service-related reviews
+2. Sort by sentiment (positive/negative)
+3. Use negative reviews to identify training opportunities
+4. Use positive reviews to recognize excellent staff performance
+
+## Tips and Best Practices
+
+### Getting the Most Accurate Results
+
+- **Update URLs regularly**: Restaurant listing URLs can change over time
+- **Set reasonable date ranges**: Scraping years of reviews can be time-consuming
+- **Run during off-hours**: Websites may be more responsive during non-peak times
+- **Use the Browserbase version**: It's more reliable and less likely to be blocked
+
+### Avoiding Common Issues
+
+- **Rate limiting**: Don't scrape too frequently to avoid being blocked
+- **Date parsing errors**: If dates aren't recognized correctly, try changing the language setting on the review site
+- **Missing reviews**: Some platforms only show a subset of reviews; consider this in your analysis
+- **Update selectors**: If the scraper stops working, website changes may have broken the selectors
+
+### Data Privacy Considerations
+
+- Only use this tool to scrape public review data
+- Don't use scraped data in ways that violate the terms of service of review platforms
+- Consider anonymizing reviewer names for internal reports
+
+## Troubleshooting
+
+### Error: "Failed to create browser session"
+
+- Check your Browserbase API key
+- Verify your internet connection
+- Try again in a few minutes
+
+### Error: "No reviews found"
+
+- Verify the URLs in your config file
+- Check if the restaurant has any reviews on that platform
+- Try running with just one platform to isolate the issue
+
+### Warning: "Date parsing failed"
+
+- This usually means the date format wasn't recognized
+- The review will still be included but might not be filtered correctly by date
+- Consider updating the date parsing patterns in `date_utils.py`
+
+## Getting Help
+
+If you encounter problems:
+
+1. Check the `scraper.log` file for detailed error messages
+2. Review the documentation in the `docs` directory
+3. Submit an issue on GitHub with details about your problem
+
+## Next Steps
+
+After gathering your review data, consider:
+
+1. **Present findings to staff**: Share positive feedback and areas for improvement
+2. **Respond to reviews**: Use the gathered data to efficiently respond to reviews
+3. **Track progress over time**: Run monthly or quarterly reports to measure improvement
+4. **Adjust business operations**: Make data-driven decisions based on consistent feedback
+5. **Market your strengths**: Use positive review themes in your marketing materials
