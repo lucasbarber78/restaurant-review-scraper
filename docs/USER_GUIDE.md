@@ -82,6 +82,8 @@ date_range:
 
 This will only collect reviews within this date range. Use YYYY-MM-DD format.
 
+Note: With the new date range prompting feature, you can also set these values interactively when running the scraper. The values in the config file will be used as fallbacks if the prompting feature is disabled.
+
 ### API Keys (Browserbase Version)
 
 ```yaml
@@ -105,6 +107,20 @@ From the main directory, run:
 python src/main_browserbase.py
 ```
 
+When you run the scraper, you'll be prompted to confirm or modify the date range:
+
+```
+=== Date Range Configuration ===
+Default date range determined as: 2025-03-08 to 2025-04-06
+
+Enter start date (YYYY-MM-DD) [default: 2025-03-08]: 
+Enter end date (YYYY-MM-DD) [default: 2025-04-06]: 
+
+Scraping reviews from 2025-03-08 to 2025-04-06
+```
+
+The default start date will be the day after your most recent review in the existing Excel file (if any), and the default end date will be yesterday. You can press Enter to accept the defaults or type a custom date.
+
 #### Legacy Version
 ```bash
 python src/main.py
@@ -123,6 +139,9 @@ python src/main_browserbase.py --max-reviews 50
 
 # Use a custom configuration file
 python src/main_browserbase.py --config my_custom_config.yaml
+
+# Skip date range prompting and use values from config file
+python src/main_browserbase.py --no-prompt
 ```
 
 ## Understanding the Results
@@ -163,8 +182,9 @@ Reviews are automatically categorized into these areas:
 ### Monthly Performance Tracking
 
 1. Run the scraper at the end of each month
-2. Compare current month's ratings and categories to previous months
-3. Identify trends and changes in customer satisfaction
+2. The scraper will automatically suggest scraping only the reviews since your last run
+3. Compare current month's ratings and categories to previous months
+4. Identify trends and changes in customer satisfaction
 
 Example command:
 ```bash
@@ -173,15 +193,14 @@ python src/main_browserbase.py --max-reviews 200
 
 ### Post-Change Analysis
 
-1. Update the date range in `config.yaml` to a period after making operational changes
+1. When prompted for date range, enter the period after making operational changes
 2. Compare results to reviews from before the changes
 3. Determine if the changes had the desired impact
 
-Example date range:
-```yaml
-date_range:
-  start: "2024-01-15"  # Date when changes were implemented
-  end: "2024-04-01"
+Example date input:
+```
+Enter start date (YYYY-MM-DD) [default: 2025-03-08]: 2025-01-15
+Enter end date (YYYY-MM-DD) [default: 2025-04-06]: 2025-04-01
 ```
 
 ### Competitor Analysis
@@ -219,6 +238,15 @@ python src/main_browserbase.py --config competitor_config.yaml
 - **Missing reviews**: Some platforms only show a subset of reviews; consider this in your analysis
 - **Update selectors**: If the scraper stops working, website changes may have broken the selectors
 
+### Incremental Scraping
+
+The new date range prompting feature makes incremental scraping easier:
+
+1. Run the scraper whenever you want new reviews
+2. The scraper will detect the most recent review date in your existing Excel file
+3. It will suggest a date range starting from the day after that date
+4. This ensures you only scrape new reviews without duplicates
+
 ### Data Privacy Considerations
 
 - Only use this tool to scrape public review data
@@ -244,6 +272,12 @@ python src/main_browserbase.py --config competitor_config.yaml
 - This usually means the date format wasn't recognized
 - The review will still be included but might not be filtered correctly by date
 - Consider updating the date parsing patterns in `date_utils.py`
+
+### Issue: "Excel file is empty or has incorrect date ranges"
+
+- Make sure you didn't specify a date range with no reviews
+- Check if your Excel file path is correct
+- Try running with the `--no-prompt` flag to use the config file values
 
 ## Getting Help
 
