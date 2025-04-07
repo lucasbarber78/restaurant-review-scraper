@@ -1,0 +1,41 @@
+{
+  "name": "restaurant-review-scraper",
+  "version": "1.0.0",
+  "description": "A comprehensive solution for scraping reviews from TripAdvisor, Yelp, and Google Reviews and exporting them to Excel",
+  "main": "src/js/index.js",
+  "scripts": {
+    "start": "node src/js/index.js",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lucasbarber78/restaurant-review-scraper.git"
+  },
+  "keywords": [
+    "web-scraping",
+    "reviews",
+    "tripadvisor",
+    "yelp",
+    "google-reviews",
+    "excel",
+    "browserbase"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lucasbarber78/restaurant-review-scraper/issues"
+  },
+  "homepage": "https://github.com/lucasbarber78/restaurant-review-scraper#readme",
+  "dependencies": {
+    "browserbase": "^1.0.0",
+    "dotenv": "^16.3.1",
+    "exceljs": "^4.4.0",
+    "puppeteer": "^21.5.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "yaml": "^2.3.4"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
