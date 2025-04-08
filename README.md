@@ -35,14 +35,47 @@ This project aims to solve the following challenges for restaurant owners and ma
   - Review category (automatically classified)
   - Sentiment (positive/negative)
 - Automated categorization of reviews based on content
-- Headless browser automation with Browserbase
+- Anti-bot detection techniques for reliable scraping
 - Configurable scraping parameters
+
+## What's New - April 2025 Update
+
+### Enhanced Anti-Bot Detection Scraper
+
+We've added a new Puppeteer-based scraper with advanced anti-detection techniques that helps avoid TripAdvisor's bot protection mechanisms. Key improvements include:
+
+- Browser fingerprint modification to appear more like a real user
+- Randomized scrolling and timing behaviors
+- Multiple selector strategies to adapt to changing HTML structures
+- Headless browser operation with customizable launch options
+
+### Restaurant-Specific Scraper
+
+A new script specifically for Bowen's Island Restaurant has been added:
+
+```bash
+# Run the Bowen's Island Restaurant scraper
+python src/scrape_bowens_island.py
+```
+
+This script not only scrapes reviews but also:
+- Generates statistical analysis reports
+- Creates visualizations of review data
+- Provides specific recommendations based on review content
+
+### CSV Output Format
+
+Reviews are now exported to CSV format with enhanced metadata:
+- Complete categorization of feedback (Food Quality, Service, etc.)
+- Sentiment analysis (Positive, Neutral, Negative)
+- Date-stamped files for tracking changes over time
 
 ## Requirements
 
 - Python 3.8+
 - Node.js 14+
-- Browserbase API key
+- For basic scraping: Browserbase API key
+- For enhanced scraping: Puppeteer
 
 ## Installation
 
@@ -81,17 +114,24 @@ excel_file_path: "reviews.xlsx"
 
 ## Usage
 
+### Main Scraper (All Platforms)
+
 Run the main script to start scraping:
 
 ```bash
 python src/main.py
 ```
 
-Or use individual scrapers:
+### Individual Platform Scrapers
+
+Use individual scrapers for specific platforms:
 
 ```bash
-# TripAdvisor only
+# Original TripAdvisor scraper
 python src/tripadvisor_scraper.py
+
+# Enhanced TripAdvisor scraper with anti-bot detection
+python src/tripadvisor_puppeteer_scraper.py
 
 # Yelp only
 python src/yelp_scraper.py
@@ -99,6 +139,19 @@ python src/yelp_scraper.py
 # Google Reviews only
 python src/google_scraper.py
 ```
+
+### Bowen's Island Restaurant Scraper
+
+For a complete analysis of Bowen's Island Restaurant:
+
+```bash
+python src/scrape_bowens_island.py
+```
+
+This script generates:
+- CSV files with all reviews
+- Statistical analysis summaries
+- Visualization plots (if matplotlib is installed)
 
 ## Key Use Cases
 
@@ -216,17 +269,29 @@ restaurant-review-scraper/
 ├── requirements.txt
 ├── package.json
 ├── config.yaml
+├── data/
+│   ├── README.md                             # Data directory documentation
+│   ├── Bowens_Island_TripAdvisor_Reviews_*.csv  # Dated review exports
+│   ├── bowens_island_reviews_raw.csv         # Raw review data 
+│   ├── bowens_island_analysis_summary.txt    # Analysis summary
+│   └── plots/                                # Visualization charts
+│       ├── ratings_distribution.png
+│       ├── category_distribution.png
+│       └── sentiment_distribution.png
 ├── src/
-│   ├── main.py                  # Main entry point
-│   ├── tripadvisor_scraper.py   # TripAdvisor scraper
-│   ├── yelp_scraper.py          # Yelp scraper 
-│   ├── google_scraper.py        # Google Reviews scraper
-│   ├── excel_exporter.py        # Excel export functionality
-│   ├── review_categorizer.py    # Review categorization logic
-│   └── utils/                   # Utility functions
-│       ├── browser_utils.py     # Browserbase utilities
-│       └── date_utils.py        # Date parsing utilities
-└── tests/                       # Unit tests
+│   ├── README.md                             # Source code documentation
+│   ├── main.py                               # Main entry point
+│   ├── tripadvisor_scraper.py                # Original TripAdvisor scraper
+│   ├── tripadvisor_puppeteer_scraper.py      # Enhanced anti-bot TripAdvisor scraper
+│   ├── scrape_bowens_island.py               # Bowen's Island specific scraper
+│   ├── yelp_scraper.py                       # Yelp scraper 
+│   ├── google_scraper.py                     # Google Reviews scraper
+│   ├── excel_exporter.py                     # Excel export functionality
+│   ├── review_categorizer.py                 # Review categorization logic
+│   └── utils/                                # Utility functions
+│       ├── browser_utils.py                  # Browser automation utilities
+│       └── date_utils.py                     # Date parsing utilities
+└── tests/                                    # Unit tests
     ├── test_tripadvisor.py
     ├── test_yelp.py
     └── test_google.py
@@ -234,21 +299,22 @@ restaurant-review-scraper/
 
 ## How It Works
 
-1. The scraper uses Browserbase to create a headless browser session
+1. The scraper uses either Browserbase or Puppeteer to create a browser session
 2. Navigates to the review pages for each platform
-3. Scrolls through and extracts review data 
-4. Processes and categorizes the reviews
-5. Exports the data to an Excel file
+3. Employs anti-bot detection techniques to avoid being blocked
+4. Scrolls through and extracts review data 
+5. Processes and categorizes the reviews
+6. Exports the data to CSV or Excel format
+7. Generates analysis reports and visualizations
 
 ## Expected Output
 
-The Excel output file includes several sheets:
+The standard output includes several files:
 
-1. **All Reviews**: Combined list of all reviews from all platforms, sorted by date (newest first)
-2. **TripAdvisor**: Reviews from TripAdvisor only
-3. **Yelp**: Reviews from Yelp only
-4. **Google**: Reviews from Google only
-5. **Summary**: Statistical breakdown of reviews by platform, rating, category, and sentiment
+1. **CSV Files**: Reviews from each platform with detailed metadata
+2. **Analysis Summary**: Text report with statistical breakdowns and trends
+3. **Visualizations**: Charts showing ratings distribution, categories, and sentiment
+4. **Excel File** (optional): Multi-sheet workbook with all data and summaries
 
 ## Analysis Techniques
 
@@ -259,21 +325,27 @@ The scraper uses several techniques to analyze reviews:
 3. **Date Parsing**: Complex date expressions (e.g., "2 weeks ago") are converted to actual dates
 4. **Statistical Aggregation**: Review counts and averages are calculated for the summary report
 
-## Limitations
+## Limitations and Considerations
 
-- Be aware of rate limits and terms of service for each platform
-- Google Reviews requires additional authentication
-- Review categorization is based on keyword matching and may require refinement
-- Websites may change their HTML structure, requiring scraper updates
+- **Terms of Service**: Be aware of rate limits and terms of service for each platform
+- **Authentication**: Google Reviews requires additional authentication steps
+- **Evolving Websites**: Review sites frequently change their HTML structure, requiring scraper updates
+- **Anti-Bot Measures**: Despite our techniques, some platforms may still detect and block automated access
+- **Review Classification**: Keyword-based categorization has limitations and may require refinement
 
 ## Troubleshooting
 
 Common issues and solutions:
 
+- **Bot Detection**: If TripAdvisor blocks access, try the enhanced Puppeteer scraper with `headless: false` option
 - **Session Limits**: If you encounter session limit errors, try reducing the `max_reviews_per_platform` setting
 - **Selector Errors**: If the scraper fails to find elements, it may need updates to match website changes
 - **Date Parsing Errors**: For complex date formats, update the date parsing logic in date_utils.py
 - **Memory Issues**: For very large datasets, try scraping one platform at a time
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
