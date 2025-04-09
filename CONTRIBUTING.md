@@ -31,16 +31,24 @@ Please be respectful and considerate of others when participating in this projec
 
 2. Install dependencies:
    ```bash
-   pip install -r requirements_browserbase.txt
-   pip install -r requirements-dev.txt  # For development-specific packages
+   pip install -r requirements.txt
+   npm install  # For Node.js dependencies
    ```
 
 3. Create a local configuration file:
    ```bash
-   cp config_browserbase_sample.yaml config.yaml
+   cp config_sample.yaml config.yaml
    ```
 
-4. Edit the configuration file with your test credentials and settings.
+4. Edit the configuration file with your test credentials and settings:
+   ```yaml
+   # Add anti-bot settings for testing
+   anti_bot_settings:
+     enable_random_delays: true
+     enable_proxy_rotation: false
+     enable_stealth_plugins: true
+     headless_mode: false
+   ```
 
 ## Development Workflow
 
@@ -105,25 +113,100 @@ Please be respectful and considerate of others when participating in this projec
 
 To add support for a new review platform, follow these steps:
 
-1. Create a new scraper class in `src/scrapers/`:
+1. Create a new scraper class in `src/`:
    - Use the existing scrapers as templates
-   - Follow the same naming convention: `platform_browserbase_scraper.py`
+   - Follow the same naming convention: `platform_scraper_enhanced.py`
 
 2. Implement these key methods:
-   - `__init__`: Set up the scraper with appropriate selectors
-   - `scrape_reviews`: Main scraping logic
+   - `__init__`: Set up the scraper with appropriate selectors and anti-bot detection settings
+   - `scrape`: Main entry point for scraping
+   - `_initialize_browser`: Browser initialization with anti-bot protection
+   - `_scrape_async`: Async implementation of the scraping process
    - Helper methods for parsing and extracting data
 
-3. Update `src/main_browserbase.py` to include your new platform:
+3. Update `src/main.py` to include your new platform:
    - Import your new scraper
-   - Add a new scraping function
-   - Update the `platforms_to_scrape` list and related logic
+   - Add conditional logic to use the enhanced version when appropriate
+   - Update platform references throughout the code
 
-4. Add platform-specific configuration to `config_browserbase_sample.yaml`.
+4. Add platform-specific configuration to `config.yaml`.
 
-5. Write tests for your new scraper in the `tests/` directory.
+5. Update anti-bot detection modules if needed:
+   - Add platform-specific code to `src/utils/stealth_plugins.py`
+   - Configure selectors for popup handling
 
-6. Update documentation to include the new platform.
+6. Write tests for your new scraper in the `tests/` directory.
+
+7. Update documentation to include the new platform.
+
+## Working with Anti-Bot Detection Modules
+
+The project includes three main anti-bot detection modules:
+
+### 1. Random Delays (`src/utils/delay_utils.py`)
+
+When adding features that involve browser interactions:
+
+- Use `delay_between_actions()` before actions like clicking, scrolling, or typing
+- Use `get_random_delay()` when you need a customized delay
+- Use `simulate_human_typing()` for form inputs instead of direct `.fill()` methods
+- Keep delays realistic (0.5-3s for most actions) to avoid detection
+
+Example:
+```python
+# Instead of this:
+await button.click()
+await page.waitForTimeout(1000)
+
+# Do this:
+if self.use_random_delays:
+    delay_between_actions("click")
+await button.click()
+await page.waitForTimeout(get_random_delay(1.0, 0.3) * 1000)
+```
+
+### 2. Proxy Rotation (`src/utils/proxy_rotation.py`)
+
+When implementing features that need IP rotation:
+
+- Use the `ProxyRotator` class to manage proxy rotation
+- Check for rotation conditions using `should_rotate()`
+- Apply new proxies at appropriate intervals
+- Add proxy configurations to config files
+
+Example:
+```python
+# Initialize rotator
+self.proxy_rotator = ProxyRotator()
+
+# Check for rotation
+if self.use_proxy_rotation and self.proxy_rotator:
+    if self.proxy_rotator.should_rotate():
+        account, proxy = self.proxy_rotator.rotate()
+        # Apply new proxy settings
+```
+
+### 3. Stealth Plugins (`src/utils/stealth_plugins.py`)
+
+When enhancing browser fingerprinting and behavior simulation:
+
+- Use the `StealthEnhancer` class with the appropriate platform
+- Apply fingerprint modifications via `enhance_browser()`
+- Implement platform-specific evasions in `_enhance_for_[platform]()`
+- Periodically check for CAPTCHAs with `detect_and_handle_captcha()`
+
+Example:
+```python
+# Initialize stealth enhancer
+if self.use_stealth_plugins:
+    self.stealth_enhancer = StealthEnhancer("platform_name")
+    
+# Apply stealth measures
+await self.stealth_enhancer.enhance_browser(self.page)
+
+# Check for CAPTCHAs
+captcha_detected = await self.stealth_enhancer.detect_and_handle_captcha(self.page)
+```
 
 ## Code Style Guidelines
 
@@ -134,6 +217,14 @@ To add support for a new review platform, follow these steps:
 - Write docstrings for all classes and methods
 - Maximum line length of 100 characters
 - Use meaningful variable and function names
+
+### Anti-Bot Detection Code
+
+- Document randomization techniques clearly
+- Keep behavior simulation realistic and human-like
+- Avoid hardcoded timing values (use configuration parameters)
+- Handle errors gracefully with fallback mechanisms
+- Use logging for debugging anti-bot detection issues
 
 ### Documentation
 
@@ -149,6 +240,13 @@ We use pytest for testing. Please write tests for:
 - New features you add
 - Bug fixes you implement
 - Edge cases and error handling
+
+For anti-bot detection features, include tests for:
+
+- Randomization functions (with fixed seeds for reproducibility)
+- Proxy rotation logic
+- Stealth plugin functionality (with mocked browser objects)
+- CAPTCHA detection and handling
 
 To run the tests:
 ```bash
@@ -178,6 +276,14 @@ Here are some areas where contributions are particularly welcome:
 - Add support for more review platforms
 - Improve error handling and resilience
 - Optimize performance and reduce resource usage
+
+### Anti-Bot Detection Enhancements
+
+- Implement additional stealth techniques for specific platforms
+- Add support for CAPTCHA solving services
+- Improve browser fingerprint randomization
+- Add more sophisticated human behavior simulation
+- Develop better proxy rotation strategies
 
 ### Data Analysis
 
