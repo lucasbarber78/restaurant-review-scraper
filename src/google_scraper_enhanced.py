@@ -442,6 +442,192 @@ class EnhancedGoogleScraper:
                     logger.info("Rotating proxy for next requests")
                     account, proxy = self.proxy_rotator.rotate()
                     # In a production environment, you would apply new proxy settings here
+
+    async def _extract_review_data(self):
+        """Extract data from loaded Google Maps reviews."""
+        logger.info("Extracting review data from Google Maps...")
+        
+        reviews = []
+        review_elements = await self.page.querySelectorAll('div[data-review-id], div[jsdata*="review"]')
+        
+        # Process reviews with human-like variable timing
+        for i, review_element in enumerate(review_elements):
+            try:
+                # Add slight delay between processing reviews
+                if self.use_random_delays and i > 0 and i % 3 == 0:
+                    await self.page.waitForTimeout(get_random_delay(0.3, 0.1) * 1000)
+                
+                # Extract review date
+                date_element = await review_element.querySelector('span[class*="review-date"]')
+                if not date_element:
+                    date_element = await review_element.querySelector('span.rsqaWe')  # Google's date class
+                
+                date_text = await self.page.evaluate('el => el.textContent', date_element) if date_element else ""
+                
+                # Parse the date
+                try:
+                    review_date = parser.parse(date_text, fuzzy=True)
+                except ValueError:
+                    # Handle relative dates like "a month ago", "a week ago", etc.
+                    current_date = datetime.now()
+                    if 'day ago' in date_text.lower() or 'days ago' in date_text.lower():
+                        days_ago = re.search(r'(\d+)\s+day', date_text.lower())
+                        days = 1 if not days_ago else int(days_ago.group(1))
+                        review_date = current_date.replace(day=current_date.day-days)
+                    elif 'week ago' in date_text.lower() or 'weeks ago' in date_text.lower():
+                        weeks_ago = re.search(r'(\d+)\s+week', date_text.lower())
+                        weeks = 1 if not weeks_ago else int(weeks_ago.group(1))
+                        review_date = current_date.replace(day=current_date.day-(weeks*7))
+                    elif 'month ago' in date_text.lower() or 'months ago' in date_text.lower():
+                        months_ago = re.search(r'(\d+)\s+month', date_text.lower())
+                        months = 1 if not months_ago else int(months_ago.group(1))
+                        # Handle month rollover
+                        new_month = current_date.month - months
+                        if new_month <= 0:
+                            new_month = 12 + new_month
+                            review_date = current_date.replace(year=current_date.year-1, month=new_month)
+                        else:
+                            review_date = current_date.replace(month=new_month)
+                    elif 'year ago' in date_text.lower() or 'years ago' in date_text.lower():
+                        years_ago = re.search(r'(\d+)\s+year', date_text.lower())
+                        years = 1 if not years_ago else int(years_ago.group(1))
+                        review_date = current_date.replace(year=current_date.year-years)
+                    else:
+                        # Default to current date if parsing fails
+                        review_date = current_date
+                
+                # Filter by date range
+                if not (self.start_date <= review_date.replace(tzinfo=None) <= self.end_date):
+                    continue
+                
+                # Extract reviewer name
+                name_element = await review_element.querySelector('div.d4r55')
+                if not name_element:
+                    name_element = await review_element.querySelector('div.TSUbDb')  # Another Google name class
+                reviewer_name = await self.page.evaluate('el => el.textContent', name_element) if name_element else "Anonymous"
+                
+                # Extract rating
+                rating_element = await review_element.querySelector('span.kvMYJc')
+                if not rating_element:
+                    rating_element = await review_element.querySelector('span[aria-label*="stars"]')
+                
+                rating = 0  # Default value
+                if rating_element:
+                    aria_label = await self.page.evaluate('el => el.getAttribute("aria-label")', rating_element)
+                    if aria_label:
+                        rating_match = re.search(r'(\d+(\.\d+)?)\s*stars?', aria_label.lower())
+                        if rating_match:
+                            rating = float(rating_match.group(1))
+                    else:
+                        # Try to determine rating from class or style
+                        style = await self.page.evaluate('el => el.getAttribute("style")', rating_element)
+                        if style:
+                            width_match = re.search(r'width:\s*(\d+(\.\d+)?)%', style)
+                            if width_match:
+                                # Convert percentage to rating (e.g., 100% = 5 stars)
+                                width_percentage = float(width_match.group(1))
+                                rating = round((width_percentage / 100) * 5, 1)
+                
+                # Extract review text
+                text_element = await review_element.querySelector('span[jsaction*="pane.review.expandReview"]')
+                if not text_element:
+                    # Try alternative selectors
+                    text_element = await review_element.querySelector('span.review-full-text')
+                    if not text_element:
+                        text_element = await review_element.querySelector('span[jsan*="review-full-text"]')
+                
+                review_text = await self.page.evaluate('el => el.textContent', text_element) if text_element else ""
+                review_text = review_text.strip()
+                
+                # Create review object
+                review = {
+                    'platform': 'Google',
+                    'reviewer_name': reviewer_name.strip(),
+                    'date': review_date.strftime('%Y-%m-%d'),
+                    'rating': rating,
+                    'text': review_text,
+                    'url': self.url,
+                    'raw_date': date_text
+                }
+                
+                # Categorize and add sentiment if configured
+                if hasattr(self, 'categorize_review'):
+                    categories = self.categorize_review(review_text)
+                    review['categories'] = ', '.join(categories)
+                
+                if hasattr(self, 'analyze_sentiment'):
+                    sentiment = self.analyze_sentiment(review_text, rating)
+                    review['sentiment'] = sentiment
+                
+                reviews.append(review)
+                
+                # Check if we've reached our review limit
+                if self.max_reviews > 0 and len(reviews) >= self.max_reviews:
+                    logger.info(f"Reached max reviews limit ({self.max_reviews})")
+                    break
+                
+            except Exception as e:
+                logger.warning(f"Failed to extract Google review {i}: {e}")
+        
+        logger.info(f"Extracted {len(reviews)} Google reviews in the specified date range")
+        return reviews
+    
+    def categorize_review(self, text):
+        """Categorize a review based on its content."""
+        if not text:
+            return ["Uncategorized"]
+            
+        text = text.lower()
+        categories = []
+        
+        # Check each category
+        if 'category_keywords' in self.config:
+            for category, keywords in self.config['category_keywords'].items():
+                for keyword in keywords:
+                    if keyword.lower() in text:
+                        categories.append(category)
+                        break
+        
+        # If no categories found, mark as Other
+        if not categories:
+            categories = ["Other"]
+            
+        return categories
+    
+    def analyze_sentiment(self, text, rating=0):
+        """Simple sentiment analysis based on rating and key phrases."""
+        if rating >= 4:
+            return "Positive"
+        elif rating <= 2:
+            return "Negative"
+        
+        # If rating is 3 or not available, check text
+        positive_words = ['good', 'great', 'excellent', 'amazing', 'awesome', 
+                         'love', 'best', 'delicious', 'enjoyed', 'recommended']
+        negative_words = ['bad', 'terrible', 'awful', 'poor', 'disappointing',
+                         'worst', 'horrible', 'avoid', 'mediocre', 'overpriced']
+        
+        if not text:
+            return "Neutral"
+            
+        text = text.lower()
+        positive_count = sum(1 for word in positive_words if word in text)
+        negative_count = sum(1 for word in negative_words if word in text)
+        
+        # Check for negations
+        negations = ['not', 'no', "n't", 'never', 'hardly']
+        for neg in negations:
+            if neg + ' ' in text.lower():
+                # Flip the sentiment counts when negation is present
+                positive_count, negative_count = negative_count, positive_count
+                break
+        
+        if positive_count > negative_count:
+            return "Positive"
+        elif negative_count > positive_count:
+            return "Negative"
+        else:
+            return "Neutral"
     
     # Add remaining methods in subsequent updates
     
