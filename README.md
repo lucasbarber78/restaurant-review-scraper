@@ -40,14 +40,25 @@ This project aims to solve the following challenges for restaurant owners and ma
 
 ## What's New - April 2025 Update
 
-### Enhanced Anti-Bot Detection Scraper
+### Enhanced Anti-Bot Detection System
 
-We've added a new Puppeteer-based scraper with advanced anti-detection techniques that helps avoid TripAdvisor's bot protection mechanisms. Key improvements include:
+We've significantly improved our anti-bot detection evasion capabilities with three major enhancements:
 
-- Browser fingerprint modification to appear more like a real user
-- Randomized scrolling and timing behaviors
-- Multiple selector strategies to adapt to changing HTML structures
-- Headless browser operation with customizable launch options
+1. **Random Delays**: Implemented human-like variable timing between actions to evade bot detection:
+   - Gaussian distribution for natural randomization
+   - Contextual delays based on action type (clicking, scrolling, typing)
+   - Occasional pauses to simulate human reading/thinking
+
+2. **Proxy Rotation**: Added the ability to rotate through multiple Browserbase accounts and proxy configurations:
+   - Time-based rotation (configurable intervals)
+   - Request-count-based rotation
+   - Support for multiple proxy types and authentication
+
+3. **Stealth Plugins**: Integrated sophisticated browser fingerprinting and behavior simulation:
+   - Realistic browser fingerprinting with consistent user-agent and headers
+   - WebGL renderer and vendor spoofing to avoid canvas fingerprinting
+   - JavaScript API modifications to hide automation indicators
+   - Platform-specific stealth techniques for Yelp and TripAdvisor
 
 ### Restaurant-Specific Scraper
 
@@ -108,18 +119,64 @@ date_range:
   start: "2024-06-01"
   end: "2025-04-30"
 
+# Anti-bot detection settings
+anti_bot_settings:
+  # Random delay settings
+  enable_random_delays: true
+  delay_base_values:
+    click: 1.0
+    scroll: 1.5
+    navigation: 3.0
+    typing: 0.2
+  
+  # Proxy rotation settings
+  enable_proxy_rotation: false
+  proxy_rotation_interval_minutes: 30
+  
+  # Stealth enhancement settings
+  enable_stealth_plugins: true
+  headless_mode: false
+  simulate_human_behavior: true
+  
 # Export settings
 excel_file_path: "reviews.xlsx"
 ```
 
 ## Usage
 
-### Main Scraper (All Platforms)
+### Main Scraper (All Platforms) with Anti-Bot Detection
 
-Run the main script to start scraping:
+Run the main script with enhanced anti-bot detection:
 
 ```bash
-python src/main.py
+python src/main.py --enhanced
+```
+
+### Command Line Options
+
+The scraper now supports several command-line arguments for fine-tuning:
+
+```bash
+# Use enhanced anti-bot detection
+python src/main.py --enhanced
+
+# Scrape only Yelp reviews with enhanced protection
+python src/main.py --enhanced --platform yelp
+
+# Run in headless mode (less visible but more detectable)
+python src/main.py --enhanced --headless
+
+# Disable stealth plugins (not recommended)
+python src/main.py --enhanced --no-stealth
+
+# Disable random delays (not recommended)
+python src/main.py --enhanced --no-random-delays
+
+# Enable proxy rotation if configured in config.yaml
+python src/main.py --enhanced --enable-proxy-rotation
+
+# Show debug information
+python src/main.py --enhanced --debug
 ```
 
 ### Individual Platform Scrapers
@@ -133,7 +190,10 @@ python src/tripadvisor_scraper.py
 # Enhanced TripAdvisor scraper with anti-bot detection
 python src/tripadvisor_puppeteer_scraper.py
 
-# Yelp only
+# Enhanced Yelp scraper with anti-bot detection
+python src/yelp_scraper_enhanced.py
+
+# Original Yelp scraper
 python src/yelp_scraper.py
 
 # Google Reviews only
@@ -204,143 +264,59 @@ Categorized reviews help prioritize operational improvements:
 - Track improvement over time after implementing changes
 - Identify seasonal patterns in customer satisfaction
 
-## Future Enhancements
+## Anti-Bot Detection Details
 
-The Restaurant Review Scraper has significant potential for expansion with these planned enhancements:
+Our enhanced anti-bot detection system uses several sophisticated techniques:
 
-### 1. Web Interface and Dashboard
+### 1. Random Delays
 
-- **Interactive Web Dashboard**: Develop a Flask or Streamlit web interface for non-technical users.
-- **Real-time Visualization**: Add interactive charts and graphs to visualize trends.
-- **Automated Report Generation**: Scheduled PDF reports delivered via email.
-- **User Management**: Multi-user access with role-based permissions.
+The system adds variable timing between actions to simulate human behavior:
 
-### 2. Advanced Analytics and AI
+- **Gaussian Distribution**: Rather than using uniform randomness, we use a bell curve distribution that better matches human timing patterns
+- **Context-Aware Delays**: Different types of actions (clicking, scrolling, typing) use different timing patterns
+- **Reading Pauses**: Occasional longer pauses are added to simulate a human reading or considering content
+- **Typing Simulation**: When entering text, the system varies the typing speed and adds occasional pauses
 
-- **Advanced Sentiment Analysis**: Implement BERT or RoBERTa models for more accurate sentiment detection.
-- **Topic Modeling**: Use LDA (Latent Dirichlet Allocation) to automatically discover common themes in reviews.
-- **Named Entity Recognition**: Identify specific dishes, staff members, or restaurant features mentioned.
-- **Predictive Analytics**: Forecast upcoming review trends based on historical patterns.
-- **Competitor Benchmarking**: Automatically compare performance metrics against competitors.
+### 2. Proxy Rotation
 
-### 3. Expanded Data Sources
+For sites with IP-based detection, we can rotate through multiple proxies:
 
-- **Additional Platforms**: Add support for Facebook, OpenTable, and regional review sites.
-- **Social Media Integration**: Incorporate mentions from Twitter, Instagram, and TikTok.
-- **Integration with POS Data**: Correlate reviews with sales data for deeper insights.
-- **Reservation Platform Data**: Connect with booking platforms to relate reviews to specific dining experiences.
+- **Time-Based Rotation**: Automatically change proxies after a configurable time interval
+- **Request-Count Rotation**: Switch proxies after a certain number of requests
+- **Multiple Account Support**: Rotate through multiple Browserbase accounts
+- **Randomization**: Option to select proxies randomly rather than sequentially
 
-### 4. Operational Integration
+### 3. Stealth Plugins
 
-- **Response Management**: Generate AI-assisted response templates for reviews.
-- **Staff Alert System**: Notify relevant team members of critical reviews in real-time.
-- **REST API**: Build an API for integration with other business systems.
-- **Mobile App**: Develop a companion mobile app for on-the-go insights.
-- **CRM Integration**: Connect review data with customer relationship management systems.
+Advanced browser fingerprinting techniques to appear as a genuine browser:
 
-### 5. Large-Scale Deployment
+- **WebGL Fingerprint Spoofing**: Consistent WebGL vendor and renderer information
+- **Navigator Property Overrides**: Hide automation indicators in browser properties
+- **Canvas Fingerprint Randomization**: Add subtle noise to canvas operations to evade fingerprinting
+- **Headers and Cookies**: Platform-specific HTTP headers and cookie handling
+- **JavaScript API Emulation**: Emulate expected JavaScript APIs that anti-bot systems check
 
-- **Docker Containerization**: Package the application for easy deployment.
-- **Kubernetes Orchestration**: Enable scaling for enterprise-level use.
-- **Multi-Restaurant Support**: Manage multiple locations from a single interface.
-- **Cloud-based Architecture**: Migrate to a fully serverless architecture.
-- **Distributed Scraping**: Implement parallel processing for faster data collection.
+### 4. Platform-Specific Measures
 
-### 6. Natural Language Processing Enhancements
+Tailored approaches for different review platforms:
 
-- **Multilingual Support**: Add capability to analyze reviews in multiple languages.
-- **Review Summarization**: Generate concise summaries of lengthy reviews.
-- **Emotion Detection**: Go beyond positive/negative to detect specific emotions.
-- **Sarcasm Detection**: Identify and properly categorize sarcastic comments.
-- **Image Analysis**: Extract and analyze images posted with reviews.
-
-### 7. Compliance and Privacy Features
-
-- **GDPR Compliance Tools**: Ensure all data collection meets privacy standards.
-- **Data Anonymization**: Automatically remove personally identifiable information.
-- **Ethical Scraping Controls**: Enhanced rate limiting and platform-specific compliance.
-- **Data Retention Policies**: Automated data aging and deletion workflows.
-
-## Project Structure
-
-```
-restaurant-review-scraper/
-├── README.md
-├── requirements.txt
-├── package.json
-├── config.yaml
-├── data/
-│   ├── README.md                             # Data directory documentation
-│   ├── Bowens_Island_TripAdvisor_Reviews_*.csv  # Dated review exports
-│   ├── bowens_island_reviews_raw.csv         # Raw review data 
-│   ├── bowens_island_analysis_summary.txt    # Analysis summary
-│   └── plots/                                # Visualization charts
-│       ├── ratings_distribution.png
-│       ├── category_distribution.png
-│       └── sentiment_distribution.png
-├── src/
-│   ├── README.md                             # Source code documentation
-│   ├── main.py                               # Main entry point
-│   ├── tripadvisor_scraper.py                # Original TripAdvisor scraper
-│   ├── tripadvisor_puppeteer_scraper.py      # Enhanced anti-bot TripAdvisor scraper
-│   ├── scrape_bowens_island.py               # Bowen's Island specific scraper
-│   ├── yelp_scraper.py                       # Yelp scraper 
-│   ├── google_scraper.py                     # Google Reviews scraper
-│   ├── excel_exporter.py                     # Excel export functionality
-│   ├── review_categorizer.py                 # Review categorization logic
-│   └── utils/                                # Utility functions
-│       ├── browser_utils.py                  # Browser automation utilities
-│       └── date_utils.py                     # Date parsing utilities
-└── tests/                                    # Unit tests
-    ├── test_tripadvisor.py
-    ├── test_yelp.py
-    └── test_google.py
-```
-
-## How It Works
-
-1. The scraper uses either Browserbase or Puppeteer to create a browser session
-2. Navigates to the review pages for each platform
-3. Employs anti-bot detection techniques to avoid being blocked
-4. Scrolls through and extracts review data 
-5. Processes and categorizes the reviews
-6. Exports the data to CSV or Excel format
-7. Generates analysis reports and visualizations
-
-## Expected Output
-
-The standard output includes several files:
-
-1. **CSV Files**: Reviews from each platform with detailed metadata
-2. **Analysis Summary**: Text report with statistical breakdowns and trends
-3. **Visualizations**: Charts showing ratings distribution, categories, and sentiment
-4. **Excel File** (optional): Multi-sheet workbook with all data and summaries
-
-## Analysis Techniques
-
-The scraper uses several techniques to analyze reviews:
-
-1. **Keyword Matching**: Reviews are categorized based on the presence of specific keywords (configured in config.yaml)
-2. **Sentiment Analysis**: A basic sentiment analysis algorithm detects positive and negative language, accounting for negation
-3. **Date Parsing**: Complex date expressions (e.g., "2 weeks ago") are converted to actual dates
-4. **Statistical Aggregation**: Review counts and averages are calculated for the summary report
-
-## Limitations and Considerations
-
-- **Terms of Service**: Be aware of rate limits and terms of service for each platform
-- **Authentication**: Google Reviews requires additional authentication steps
-- **Evolving Websites**: Review sites frequently change their HTML structure, requiring scraper updates
-- **Anti-Bot Measures**: Despite our techniques, some platforms may still detect and block automated access
-- **Review Classification**: Keyword-based categorization has limitations and may require refinement
+- **Yelp-Specific Enhancements**: Special handling for Yelp's advanced detection systems
+- **TripAdvisor Optimization**: Custom behavior patterns that match expected TripAdvisor user flows
+- **Captcha Detection**: Automatic detection and handling of various CAPTCHA types
 
 ## Troubleshooting
 
 Common issues and solutions:
 
-- **Bot Detection**: If TripAdvisor blocks access, try the enhanced Puppeteer scraper with `headless: false` option
+- **Bot Detection**: If you're still experiencing blocks, try:
+  - Disabling headless mode (`--headless false`)
+  - Enabling proxy rotation if you have proxies configured
+  - Reducing the number of reviews scraped per session
+  
 - **Session Limits**: If you encounter session limit errors, try reducing the `max_reviews_per_platform` setting
+
 - **Selector Errors**: If the scraper fails to find elements, it may need updates to match website changes
-- **Date Parsing Errors**: For complex date formats, update the date parsing logic in date_utils.py
+
 - **Memory Issues**: For very large datasets, try scraping one platform at a time
 
 ## Contributing
