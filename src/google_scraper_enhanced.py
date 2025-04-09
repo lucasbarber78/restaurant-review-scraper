@@ -289,173 +289,162 @@ class EnhancedGoogleScraper:
         except Exception as e:
             logger.warning(f"Error applying review filters: {e}")
     
-    async def _initialize_browser(self):
-        """Initialize browser with anti-bot protection measures."""
-        try:
-            from puppeteer import launch
-            
-            # Set launch options with anti-detection features
-            launch_options = {
-                'headless': self.headless_mode,
-                'args': [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-blink-features=AutomationControlled',  # Key for avoiding detection
-                    '--disable-infobars',
-                    '--window-size=1366,768',
-                    '--disable-dev-shm-usage',
-                    '--disable-accelerated-2d-canvas',
-                    '--no-first-run',
-                    '--no-zygote',
-                ]
-            }
-            
-            # If proxy rotation is enabled and we have configured proxies
-            if self.use_proxy_rotation and self.proxy_rotator:
-                account, proxy = self.proxy_rotator.get_current_account(), self.proxy_rotator.get_current_proxy()
-                
-                # Check if proxy is configured
-                if proxy:
-                    proxy_url = f"http://{proxy.get('host')}:{proxy.get('port')}"
-                    if 'username' in proxy and 'password' in proxy:
-                        proxy_url = f"http://{proxy['username']}:{proxy['password']}@{proxy['host']}:{proxy['port']}"
-                    
-                    launch_options['args'].append(f'--proxy-server={proxy_url}')
-                    logger.info(f"Using proxy: {proxy['host']}:{proxy['port']}")
-            
-            # Launch the browser
-            self.browser = await launch(launch_options)
-            
-            # Create a new page
-            self.page = await self.browser.newPage()
-            
-            # Set a realistic viewport
-            await self.page.setViewport({
-                'width': 1366,
-                'height': 768
-            })
-            
-            # Apply stealth measures if enabled
-            if self.use_stealth_plugins and self.stealth_enhancer:
-                await self.stealth_enhancer.enhance_browser(self.page)
-            
-            # Set timeout
-            await self.page.setDefaultNavigationTimeout(self.timeout * 1000)
-            
-            logger.info("Browser initialized with anti-detection measures")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to initialize browser: {e}")
-            return False
-    
-    async def _scrape_async(self):
-        """Async implementation of the scraping process."""
-        try:
-            # Initialize browser with anti-bot protection
-            success = await self._initialize_browser()
-            if not success:
-                return []
-            
-            # Navigate to Google Maps page
-            await self._navigate_to_reviews_page()
-            
-            # Handle any cookie popups
-            await self._handle_cookies_popup()
-            
-            # Handle any other popups
-            await self._handle_popups()
-            
-            # Sort reviews by newest first if possible
-            await self._filter_reviews()
-            
-            # Scroll to load more reviews
-            await self._scroll_reviews()
-            
-            # Extract review data
-            reviews = await self._extract_review_data()
-            
-            return reviews
-            
-        except Exception as e:
-            logger.error(f"Error during async Google scraping: {e}", exc_info=True)
-            
-            # Take a screenshot to help with debugging
-            try:
-                if self.page:
-                    await self.page.screenshot({'path': 'google_scraping_error.png'})
-                    logger.info("Saved error screenshot to google_scraping_error.png")
-            except:
-                pass
-                
-            return []
-        finally:
-            # Close browser if it exists
-            if self.browser:
-                await self.browser.close()
-                logger.info("Browser closed")
-    
-    def scrape(self):
-        """Scrape reviews from Google Maps using anti-bot measures.
+    async def _scroll_reviews(self):
+        """Scroll through reviews with human-like behavior."""
+        # Find the reviews container
+        reviews_container_selectors = [
+            'div.review-dialog-list',
+            'div[jsname="WMgU0"]',  # Google's reviews container
+            'div[jsdata*="review"]'
+        ]
         
-        Returns:
-            list: List of review dictionaries.
-        """
-        reviews = []
+        reviews_container = None
+        for selector in reviews_container_selectors:
+            container = await self.page.querySelector(selector)
+            if container:
+                reviews_container = container
+                break
         
-        try:
-            # Create event loop
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                # If no event loop exists, create a new one
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                
-            # Run scraping in async mode
-            reviews = loop.run_until_complete(self._scrape_async())
-            
-            # Save reviews to CSV if configured
-            if reviews and 'csv_file_path' in self.config:
-                self._save_to_csv(reviews, self.config['csv_file_path'])
-                
-        except Exception as e:
-            logger.error(f"Error during Google scraping: {e}", exc_info=True)
+        if not reviews_container:
+            logger.warning("Reviews container not found, trying to scroll the main page")
+            # If we can't find a dedicated reviews container, use the main page
+            reviews_container = await self.page.querySelector('div[role="main"]')
         
-        return reviews
-    
-    def _save_to_csv(self, reviews, filepath=None):
-        """Save reviews to a CSV file."""
-        import csv
-        from pathlib import Path
-        
-        if not reviews:
-            logger.warning("No reviews to save")
+        if not reviews_container:
+            logger.error("Couldn't find any scrollable container")
             return
             
-        # Use provided filepath or default
-        if not filepath:
-            filepath = f"{self.config.get('restaurant_name', 'restaurant').replace(' ', '_')}_google_reviews.csv"
-            
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
+        # Initial check of reviews
+        reviews_loaded = 0
+        last_review_count = 0
+        stall_count = 0
         
-        try:
-            # Write to CSV
-            with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
-                fieldnames = list(reviews[0].keys())
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(reviews)
-                
-            logger.info(f"Successfully saved {len(reviews)} reviews to {filepath}")
-            return filepath
+        # Track scrolling behavior for realistic patterns
+        scroll_count = 0
+        
+        # Get container handle for scrolling
+        container_handle = reviews_container
+        
+        while True:
+            # Increment scroll counter
+            scroll_count += 1
             
-        except Exception as e:
-            logger.error(f"Failed to save reviews to CSV: {e}")
-            return None
-
-
+            # Randomize scrolling behavior
+            if self.use_random_delays and self.simulate_human:
+                # Occasionally pause for a longer time (simulating user reading)
+                if random.random() < 0.2:  # 20% chance
+                    longer_pause = random.uniform(3.0, 8.0)
+                    logger.debug(f"Simulating reading pause for {longer_pause:.2f}s")
+                    await self.page.waitForTimeout(longer_pause * 1000)
+                
+                # Occasionally scroll up a bit before continuing down
+                if scroll_count > 2 and random.random() < 0.15:  # 15% chance after 2nd scroll
+                    scroll_up_amount = random.randint(100, 300)
+                    logger.debug(f"Scrolling up {scroll_up_amount}px to simulate human behavior")
+                    
+                    # Scroll up in the reviews container
+                    await self.page.evaluate(f"""
+                        (container) => {{
+                            container.scrollBy(0, -{scroll_up_amount});
+                        }}
+                    """, container_handle)
+                    
+                    await self.page.waitForTimeout(get_random_delay(0.8, 0.2) * 1000)
+            
+            # Scroll down with variable distance
+            if self.use_random_delays and self.simulate_human:
+                # Varied scroll distances instead of full viewport
+                scroll_amount = random.randint(300, 800)
+                
+                # Scroll down in the reviews container
+                await self.page.evaluate(f"""
+                    (container) => {{
+                        container.scrollBy(0, {scroll_amount});
+                    }}
+                """, container_handle)
+            else:
+                # Standard scroll by viewport height
+                await self.page.evaluate("""
+                    (container) => {
+                        container.scrollBy(0, container.clientHeight);
+                    }
+                """, container_handle)
+            
+            # Randomized pause between scrolls
+            if self.use_random_delays:
+                await self.page.waitForTimeout(get_random_delay(self.scroll_pause_time, 0.5) * 1000)
+            else:
+                await self.page.waitForTimeout(self.scroll_pause_time * 1000)
+            
+            # Expand review text by clicking "More" buttons
+            more_buttons = await self.page.querySelectorAll('button[jsaction*="pane.review.expandReview"]')
+            
+            # Only click a random subset of "More" buttons to appear human-like
+            if self.simulate_human and len(more_buttons) > 0:
+                # Randomly select only some buttons to click
+                buttons_to_click = random.sample(
+                    more_buttons, 
+                    min(len(more_buttons), random.randint(1, min(3, len(more_buttons))))
+                )
+                
+                for button in buttons_to_click:
+                    try:
+                        if self.use_random_delays:
+                            delay_between_actions("click")
+                        
+                        await button.click()
+                        
+                        if self.use_random_delays:
+                            await self.page.waitForTimeout(get_random_delay(0.5, 0.2) * 1000)
+                        else:
+                            await self.page.waitForTimeout(500)
+                    except Exception:
+                        pass
+            else:
+                # Default behavior: try to click all more buttons
+                for button in more_buttons:
+                    try:
+                        await button.click()
+                        await self.page.waitForTimeout(500)
+                    except Exception:
+                        pass
+            
+            # Check if we've reached our review limit
+            current_reviews = await self.page.querySelectorAll('div[data-review-id], div[jsdata*="review"]')
+            reviews_loaded = len(current_reviews)
+            
+            if self.max_reviews > 0 and reviews_loaded >= self.max_reviews:
+                logger.info(f"Reached max reviews limit ({self.max_reviews})")
+                break
+            
+            # Check if we've loaded new reviews
+            if reviews_loaded == last_review_count:
+                stall_count += 1
+                if stall_count >= 5:  # If we've stalled 5 times, assume we're done
+                    logger.info("No new reviews loading, ending scroll")
+                    break
+            else:
+                stall_count = 0
+                
+            last_review_count = reviews_loaded
+            
+            # Periodically check for CAPTCHA if stealth plugins are enabled
+            if self.use_stealth_plugins and self.stealth_enhancer and scroll_count % 3 == 0:
+                captcha_detected = await self.stealth_enhancer.detect_and_handle_captcha(self.page)
+                if captcha_detected:
+                    logger.warning("CAPTCHA detected during scrolling, attempting to handle")
+            
+            logger.info(f"Loaded {reviews_loaded} reviews so far...")
+            
+            # Check if we should rotate proxy
+            if self.use_proxy_rotation and self.proxy_rotator:
+                if self.proxy_rotator.should_rotate():
+                    logger.info("Rotating proxy for next requests")
+                    account, proxy = self.proxy_rotator.rotate()
+                    # In a production environment, you would apply new proxy settings here
+    
+    # Add remaining methods in subsequent updates
+    
 if __name__ == "__main__":
     # Set up logging
     logging.basicConfig(
