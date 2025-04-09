@@ -629,8 +629,216 @@ class EnhancedGoogleScraper:
         else:
             return "Neutral"
     
-    # Add remaining methods in subsequent updates
+    async def _initialize_browser(self):
+        """Initialize browser with anti-bot protection measures."""
+        try:
+            from puppeteer import launch
+            
+            # Set launch options with anti-detection features
+            launch_options = {
+                'headless': self.headless_mode,
+                'args': [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-blink-features=AutomationControlled',  # Key for avoiding detection
+                    '--disable-infobars',
+                    '--window-size=1366,768',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                ]
+            }
+            
+            # If proxy rotation is enabled and we have configured proxies
+            if self.use_proxy_rotation and self.proxy_rotator:
+                account, proxy = self.proxy_rotator.get_current_account(), self.proxy_rotator.get_current_proxy()
+                
+                # Check if proxy is configured
+                if proxy:
+                    proxy_url = f"http://{proxy.get('host')}:{proxy.get('port')}"
+                    if 'username' in proxy and 'password' in proxy:
+                        proxy_url = f"http://{proxy['username']}:{proxy['password']}@{proxy['host']}:{proxy['port']}"
+                    
+                    launch_options['args'].append(f'--proxy-server={proxy_url}')
+                    logger.info(f"Using proxy: {proxy['host']}:{proxy['port']}")
+            
+            # Launch the browser
+            self.browser = await launch(launch_options)
+            
+            # Create a new page
+            self.page = await self.browser.newPage()
+            
+            # Set a realistic viewport
+            await self.page.setViewport({
+                'width': 1366,
+                'height': 768
+            })
+            
+            # Set a custom user agent to avoid detection
+            await self.page.setUserAgent(
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            )
+            
+            # Apply stealth measures if enabled
+            if self.use_stealth_plugins and self.stealth_enhancer:
+                await self.stealth_enhancer.enhance_browser(self.page)
+            
+            # Set timeout
+            await self.page.setDefaultNavigationTimeout(self.timeout * 1000)
+            
+            # Additional modifications to avoid detection
+            await self.page.evaluateOnNewDocument("""
+                () => {
+                    // Overwrite the navigator properties
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => false
+                    });
+                    
+                    // Overwrite Permissions API
+                    if (window.Permissions && window.Permissions.prototype.query) {
+                        const originalQuery = window.Permissions.prototype.query;
+                        window.Permissions.prototype.query = (parameters) => {
+                            return Promise.resolve({state: "granted", onchange: null});
+                        };
+                    }
+                    
+                    // Overwrite plugins
+                    Object.defineProperty(navigator, 'plugins', {
+                        get: () => {
+                            return [1, 2, 3, 4, 5];
+                        }
+                    });
+                    
+                    // Pass Chrome notification check
+                    window.chrome = {
+                        runtime: {}
+                    };
+                }
+            """)
+            
+            logger.info("Browser initialized with anti-detection measures")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize browser: {e}")
+            return False
     
+    async def _scrape_async(self):
+        """Async implementation of the scraping process."""
+        try:
+            # Initialize browser with anti-bot protection
+            success = await self._initialize_browser()
+            if not success:
+                return []
+            
+            # Navigate to Google Maps reviews page
+            await self._navigate_to_reviews_page()
+            
+            # Handle any cookie popups
+            await self._handle_cookies_popup()
+            
+            # Handle any other popups
+            await self._handle_popups()
+            
+            # Sort reviews by newest first if possible
+            await self._filter_reviews()
+            
+            # Scroll to load more reviews
+            await self._scroll_reviews()
+            
+            # Extract review data
+            reviews = await self._extract_review_data()
+            
+            return reviews
+            
+        except Exception as e:
+            logger.error(f"Error during async Google Maps scraping: {e}", exc_info=True)
+            
+            # Take a screenshot to help with debugging
+            try:
+                if self.page:
+                    await self.page.screenshot({'path': 'google_scraping_error.png'})
+                    logger.info("Saved error screenshot to google_scraping_error.png")
+            except:
+                pass
+                
+            return []
+        finally:
+            # Close browser if it exists
+            if self.browser:
+                await self.browser.close()
+                logger.info("Browser closed")
+    
+    def scrape(self):
+        """Scrape reviews from Google Maps using anti-bot measures.
+        
+        Returns:
+            list: List of review dictionaries.
+        """
+        reviews = []
+        
+        try:
+            # Create event loop
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                # If no event loop exists, create a new one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+            # Run scraping in async mode
+            reviews = loop.run_until_complete(self._scrape_async())
+            
+            # Save reviews to CSV if configured
+            if reviews and 'csv_file_path' in self.config:
+                self._save_to_csv(reviews, self.config['csv_file_path'])
+                
+        except Exception as e:
+            logger.error(f"Error during Google Maps scraping: {e}", exc_info=True)
+        
+        return reviews
+    
+    def _save_to_csv(self, reviews, filepath=None):
+        """Save reviews to a CSV file.
+        
+        Args:
+            reviews (list): List of review dictionaries.
+            filepath (str, optional): Path to save the CSV file. Defaults to None.
+            
+        Returns:
+            str: Path to the saved CSV file or None if save failed.
+        """
+        import csv
+        from pathlib import Path
+        
+        if not reviews:
+            logger.warning("No reviews to save")
+            return
+            
+        # Use provided filepath or default
+        if not filepath:
+            filepath = f"{self.config.get('restaurant_name', 'restaurant').replace(' ', '_')}_google_reviews.csv"
+            
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(os.path.abspath(filepath)), exist_ok=True)
+        
+        try:
+            # Write to CSV
+            with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
+                fieldnames = list(reviews[0].keys())
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(reviews)
+                
+            logger.info(f"Successfully saved {len(reviews)} reviews to {filepath}")
+            return filepath
+            
+        except Exception as e:
+            logger.error(f"Failed to save reviews to CSV: {e}")
+            return None
+
+
 if __name__ == "__main__":
     # Set up logging
     logging.basicConfig(
