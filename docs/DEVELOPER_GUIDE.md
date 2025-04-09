@@ -28,10 +28,14 @@ The project follows a modular design with clear separation of concerns:
 1. **Browser Automation Layer**
    - `browser_utils.py` (Puppeteer version)
    - `browserbase_scraper.py` (Browserbase version)
+   - **NEW** Anti-Bot Detection Utilities:
+     - `delay_utils.py` (Randomized human-like delays)
+     - `proxy_rotation.py` (Multi-account and proxy rotation)
+     - `stealth_plugins.py` (Advanced fingerprint and behavior simulation)
 
 2. **Platform-Specific Scrapers**
-   - TripAdvisor scrapers
-   - Yelp scrapers
+   - TripAdvisor scrapers (`tripadvisor_scraper.py`, `tripadvisor_puppeteer_scraper.py`)
+   - Yelp scrapers (`yelp_scraper.py`, **NEW** `yelp_scraper_enhanced.py`)
    - Google Reviews scrapers
 
 3. **Data Processing**
@@ -43,7 +47,7 @@ The project follows a modular design with clear separation of concerns:
    - `excel_exporter.py` (structured data export to Excel)
 
 5. **Main Orchestration**
-   - `main.py` (Puppeteer version)
+   - `main.py` (Updated to support enhanced anti-bot features)
    - `main_browserbase.py` (Browserbase version)
 
 ## Design Principles
@@ -69,7 +73,16 @@ The original implementation uses Puppeteer (via the `pyppeteer` Python bindings)
 - Is vulnerable to detection by anti-bot mechanisms
 - May have stability issues on certain platforms
 
-### Browserbase (New)
+### Enhanced Anti-Bot Version (NEW)
+
+The enhanced version builds on the Puppeteer approach but adds sophisticated anti-bot detection evasion mechanisms:
+
+- **Random Delays**: Gaussian distribution for human-like timing patterns
+- **Proxy Rotation**: Multiple account and proxy support
+- **Stealth Plugins**: Browser fingerprint and automation indicator masking
+- **Human-like Behavior Simulation**: Natural scrolling, clicking, and interaction patterns
+
+### Browserbase (Alternative)
 
 The Browserbase version uses a cloud-based browser automation service that:
 
@@ -77,6 +90,72 @@ The Browserbase version uses a cloud-based browser automation service that:
 - Eliminates the need for local browser installation
 - Offers better stability and reliability
 - Requires an API key and may incur usage costs
+
+## Anti-Bot Detection Systems (NEW)
+
+The anti-bot detection mitigation system consists of three main components:
+
+### 1. Random Delay System
+
+The `delay_utils.py` module provides functions for generating human-like delays between actions:
+
+- **Gaussian Distributions**: Uses bell curve randomization instead of uniform distribution for more natural timing
+- **Action-Specific Delays**: Different delay patterns for different actions (clicking, scrolling, typing)
+- **Natural Typing Simulation**: Variable typing speed with occasional pauses
+
+Key Implementation:
+```python
+def get_random_delay(base_delay: float = 2.0, variance: float = 1.0) -> float:
+    """Generate a random delay with Gaussian distribution around the base delay."""
+    # Use Gaussian distribution for more human-like randomness
+    delay = random.gauss(base_delay, variance)
+    # Ensure delay is not negative or too short
+    return max(0.5, delay)
+```
+
+### 2. Proxy Rotation System
+
+The `proxy_rotation.py` module implements account and proxy rotation to avoid IP-based detection:
+
+- **Time-Based Rotation**: Changes proxies after configured time intervals
+- **Request-Count Rotation**: Rotates after specified number of operations
+- **Multiple Account Support**: Manages multiple Browserbase accounts
+- **Configurable Selection**: Sequential or random selection options
+
+Key Implementation:
+```python
+class ProxyRotator:
+    """Class for managing proxy rotation across multiple Browserbase accounts."""
+    
+    def __init__(self, config_path: Optional[str] = None):
+        # Initialize proxy configuration
+        
+    def rotate(self) -> Tuple[Dict[str, Any], Optional[Dict[str, str]]]:
+        """Rotate to a new account and/or proxy."""
+        # Implementation for rotating accounts and proxies
+```
+
+### 3. Stealth Plugins System
+
+The `stealth_plugins.py` module provides browser fingerprinting and behavior simulation:
+
+- **WebGL Fingerprint Spoofing**: Consistent renderer/vendor data
+- **Navigator Property Overrides**: Hides automation indicators
+- **Canvas Fingerprinting Evasion**: Adds randomized noise to avoid fingerprinting
+- **Platform-Specific Optimizations**: Custom handling for Yelp and TripAdvisor
+
+Key Implementation:
+```python
+class StealthEnhancer:
+    """Class for enhancing browser stealth capabilities beyond basic settings."""
+    
+    def __init__(self, platform: str = "general"):
+        # Initialize stealth enhancer for specific platform
+        
+    async def enhance_browser(self, page):
+        """Apply all stealth enhancements to a browser page."""
+        # Implementation of stealth enhancement techniques
+```
 
 ## Data Extraction Logic
 
@@ -103,6 +182,8 @@ The data extraction process follows these steps:
 - Aggressively detects and blocks automated browsers
 - Review translation features can interfere with extraction
 - Inconsistent DOM structure across different restaurant pages
+- **NEW**: Enhanced stealth handling specifically for Yelp's detection methods
+- **NEW**: Special handling for cookie and login prompts
 
 #### Google Reviews
 
@@ -207,45 +288,50 @@ Developers can extend the system in several ways:
 5. **Scheduling**: Implement periodic scraping and trend analysis
 6. **User Interface**: Develop a web interface or GUI
 7. **Better Date Handling**: Extend date parsing for additional formats
+8. **NEW: Advanced Anti-Bot Techniques**: Extend stealth plugins for other platforms
 
-### Adding a New Scraper
+### Adding a New Scraper with Anti-Bot Protection
 
-To add a new review platform scraper:
+To add a new review platform scraper with anti-bot protection:
 
-1. Create a new file in `src/scrapers/` named `[platform]_browserbase_scraper.py`
-2. Implement a class that follows the pattern of existing scrapers:
+1. Create a new file in `src/` named `[platform]_scraper_enhanced.py`
+2. Implement a class that follows the pattern of the enhanced Yelp scraper:
    ```python
-   class NewPlatformBrowserbaseScraper:
-       def __init__(self, api_key=None, config_path=None):
-           self.scraper = BrowserbaseScraper(api_key, config_path)
-           self.config = self.scraper.config
-           self.selectors = {
-               # Platform-specific selectors
-           }
+   class EnhancedNewPlatformScraper:
+       def __init__(self, config):
+           self.config = config
+           self.anti_bot_settings = config.get('anti_bot_settings', {})
+           self.use_random_delays = self.anti_bot_settings.get('enable_random_delays', True)
+           self.use_proxy_rotation = self.anti_bot_settings.get('enable_proxy_rotation', False)
+           self.use_stealth_plugins = self.anti_bot_settings.get('enable_stealth_plugins', True)
+           
+           # Initialize stealth enhancer for the specific platform
+           if self.use_stealth_plugins:
+               self.stealth_enhancer = StealthEnhancer("[platform]")
+           
+           # Initialize proxy rotator if enabled
+           if self.use_proxy_rotation:
+               self.proxy_rotator = ProxyRotator()
        
-       def scrape_reviews(self, url=None, max_reviews=100):
-           # Implementation
+       def scrape(self):
+           # Implementation with anti-bot techniques
            pass
    ```
-3. Update `main_browserbase.py` to include your new platform:
+3. Update `main.py` to include your new platform:
    - Import the new scraper
-   - Add a scraping function
-   - Update the command-line arguments
-   - Add to the platforms dictionary
+   - Add conditional logic to use either standard or enhanced version
+   - Update the command-line arguments if needed
 
-### Improving Date Range Handling
+### Implementing New Anti-Bot Techniques
 
-To extend the date range functionality:
+To implement additional anti-bot detection evasion techniques:
 
-1. Enhance `date_range_utils.py` with additional features:
-   - Calendar-based UI selection
-   - Automatic scheduling
-   - Custom date range presets (last month, last quarter, etc.)
-
-2. Add functions to provide more context about the date range:
-   - Statistics about existing data
-   - Visualization of review distribution over time
-   - Preview of potential new review count
+1. Identify the detection mechanism you want to target
+2. Extend the appropriate utility module:
+   - For timing-based techniques: `delay_utils.py`
+   - For proxy or IP-based techniques: `proxy_rotation.py`
+   - For browser fingerprinting and behavior: `stealth_plugins.py`
+3. Add appropriate integration points in the enhanced scraper classes
 
 ## Performance Considerations
 
@@ -254,6 +340,7 @@ To extend the date range functionality:
 - Parallel scraping of different platforms could improve performance
 - Rate limiting is essential to avoid being blocked
 - Smart date ranges can significantly reduce unnecessary scraping
+- **NEW**: Anti-bot features may slightly impact performance but greatly improve reliability
 
 ## Testing Strategy
 
@@ -262,11 +349,13 @@ The project includes unit tests for:
 - Categorization algorithms
 - Excel export functionality
 - Date range utilities
+- **NEW**: Anti-bot utility functions
 
 Integration tests cover:
 - End-to-end scraping workflows (with reduced review counts)
 - Configuration loading and validation
 - Excel file processing
+- **NEW**: Anti-bot effectiveness against different platforms
 
 Tests use mock responses for network operations to ensure reliability.
 
@@ -277,6 +366,7 @@ Tests use mock responses for network operations to ensure reliability.
 - Network requests use HTTPS
 - Input validation prevents injection attacks
 - Excel files are validated before reading to prevent formula injection
+- **NEW**: Proxy credentials are handled securely
 
 ## Licensing and Legal Considerations
 
