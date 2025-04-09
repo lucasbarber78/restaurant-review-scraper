@@ -14,27 +14,7 @@ Before using the Restaurant Review Scraper, you'll need:
 
 ### Installation
 
-#### Option 1: Browserbase Version (Recommended)
-
-1. Clone or download the repository:
-   ```bash
-   git clone https://github.com/lucasbarber78/restaurant-review-scraper.git
-   cd restaurant-review-scraper
-   ```
-
-2. Install dependencies:
-   ```bash
-   pip install -r requirements_browserbase.txt
-   ```
-
-3. Copy the sample configuration file:
-   ```bash
-   cp config_browserbase_sample.yaml config.yaml
-   ```
-
-4. Edit the configuration file with your information (see Configuration section below).
-
-#### Option 2: Local Browser Version (Legacy)
+#### Option 1: Enhanced Version with Anti-Bot Detection (Recommended)
 
 1. Clone or download the repository:
    ```bash
@@ -52,7 +32,47 @@ Before using the Restaurant Review Scraper, you'll need:
    cp config_sample.yaml config.yaml
    ```
 
+4. Edit the configuration file with your information (see Configuration section below).
+
+#### Option 2: Browserbase Version 
+
+1. Clone or download the repository:
+   ```bash
+   git clone https://github.com/lucasbarber78/restaurant-review-scraper.git
+   cd restaurant-review-scraper
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements_browserbase.txt
+   ```
+
+3. Copy the sample configuration file:
+   ```bash
+   cp config_browserbase_sample.yaml config.yaml
+   ```
+
 4. Edit the configuration file with your information.
+
+#### Option 3: Local Browser Version (Legacy)
+
+1. Clone or download the repository:
+   ```bash
+   git clone https://github.com/lucasbarber78/restaurant-review-scraper.git
+   cd restaurant-review-scraper
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Copy the sample configuration file:
+   ```bash
+   cp config_sample.yaml config.yaml
+   ```
+
+4. Edit the configuration file with your information, but do not enable the anti-bot features.
 
 ## Configuration
 
@@ -82,7 +102,38 @@ date_range:
 
 This will only collect reviews within this date range. Use YYYY-MM-DD format.
 
-Note: With the new date range prompting feature, you can also set these values interactively when running the scraper. The values in the config file will be used as fallbacks if the prompting feature is disabled.
+Note: With the date range prompting feature, you can also set these values interactively when running the scraper. The values in the config file will be used as fallbacks if the prompting feature is disabled.
+
+### Anti-Bot Detection Settings (NEW)
+
+```yaml
+anti_bot_settings:
+  # Random delay settings
+  enable_random_delays: true
+  delay_base_values:
+    click: 1.0
+    scroll: 1.5
+    navigation: 3.0
+    typing: 0.2
+    default: 1.0
+  delay_variance: 0.5  # Random variance factor
+  
+  # Proxy rotation settings
+  enable_proxy_rotation: false
+  proxy_rotation_interval_minutes: 30  # Rotate proxy every 30 minutes
+  proxy_rotation_frequency: 10  # Rotate after every 10 requests
+  random_proxy_rotation: true  # Use random instead of sequential rotation
+  
+  # Stealth enhancement settings
+  enable_stealth_plugins: true
+  headless_mode: false  # Set to false to avoid detection (true for production)
+  simulate_human_behavior: true
+  randomize_fingerprint: true
+  platform_specific_stealth:
+    yelp: true
+    tripadvisor: true
+    google: false
+```
 
 ### API Keys (Browserbase Version)
 
@@ -102,9 +153,9 @@ excel_file_path: "my_restaurant_reviews.xlsx"
 
 From the main directory, run:
 
-#### Browserbase Version (Recommended)
+#### Enhanced Version with Anti-Bot Detection (Recommended)
 ```bash
-python src/main_browserbase.py
+python src/main.py --enhanced
 ```
 
 When you run the scraper, you'll be prompted to confirm or modify the date range:
@@ -121,6 +172,11 @@ Scraping reviews from 2025-03-08 to 2025-04-06
 
 The default start date will be the day after your most recent review in the existing Excel file (if any), and the default end date will be yesterday. You can press Enter to accept the defaults or type a custom date.
 
+#### Browserbase Version
+```bash
+python src/main_browserbase.py
+```
+
 #### Legacy Version
 ```bash
 python src/main.py
@@ -131,17 +187,35 @@ python src/main.py
 Customize your scraping with these options:
 
 ```bash
+# Use enhanced anti-bot detection (recommended for Yelp)
+python src/main.py --enhanced
+
 # Scrape only specific platforms
-python src/main_browserbase.py --platforms tripadvisor yelp
+python src/main.py --enhanced --platform yelp
 
 # Set maximum number of reviews per platform
-python src/main_browserbase.py --max-reviews 50
+python src/main.py --enhanced --max-reviews 50
 
 # Use a custom configuration file
-python src/main_browserbase.py --config my_custom_config.yaml
+python src/main.py --enhanced --config my_custom_config.yaml
 
 # Skip date range prompting and use values from config file
-python src/main_browserbase.py --no-prompt
+python src/main.py --enhanced --no-prompt
+
+# Run in headless mode (less visible but more detectable)
+python src/main.py --enhanced --headless
+
+# Disable stealth plugins (not recommended)
+python src/main.py --enhanced --no-stealth
+
+# Disable random delays (not recommended)
+python src/main.py --enhanced --no-random-delays
+
+# Enable proxy rotation if configured in config.yaml
+python src/main.py --enhanced --enable-proxy-rotation
+
+# Show debug information
+python src/main.py --enhanced --debug
 ```
 
 ## Understanding the Results
@@ -188,7 +262,7 @@ Reviews are automatically categorized into these areas:
 
 Example command:
 ```bash
-python src/main_browserbase.py --max-reviews 200
+python src/main.py --enhanced --max-reviews 200
 ```
 
 ### Post-Change Analysis
@@ -212,7 +286,7 @@ Enter end date (YYYY-MM-DD) [default: 2025-04-06]: 2025-04-01
 
 Example command:
 ```bash
-python src/main_browserbase.py --config competitor_config.yaml
+python src/main.py --enhanced --config competitor_config.yaml
 ```
 
 ### Staff Training Support
@@ -222,6 +296,45 @@ python src/main_browserbase.py --config competitor_config.yaml
 3. Use negative reviews to identify training opportunities
 4. Use positive reviews to recognize excellent staff performance
 
+## Anti-Bot Detection Features (NEW)
+
+The enhanced version includes advanced techniques to avoid being blocked by review sites:
+
+### Random Delays
+
+The system adds variable timing between actions to simulate human behavior:
+
+- Creates natural pauses between clicks, scrolls, and typing
+- Varies timing to appear less robotic
+- Occasionally adds longer pauses to simulate reading behavior
+
+### Proxy Rotation
+
+For sites with IP-based blocking, the system can rotate through multiple accounts or proxies:
+
+- Automatically change proxies after a configurable time interval
+- Switch IP addresses after a certain number of requests
+- Supports multiple Browserbase accounts
+
+To use this feature, configure multiple accounts in your config.yaml:
+
+```yaml
+browserbase_accounts:
+  - name: "Primary Account"
+    api_key: "YOUR_API_KEY_HERE"
+  - name: "Secondary Account"
+    api_key: "SECOND_API_KEY_HERE"
+```
+
+### Stealth Plugins
+
+The system uses sophisticated browser fingerprinting and behavior simulation:
+
+- Prevents websites from detecting automation
+- Simulates realistic browser properties
+- Handles cookies and login prompts automatically
+- Has special optimizations for Yelp's advanced detection systems
+
 ## Tips and Best Practices
 
 ### Getting the Most Accurate Results
@@ -229,7 +342,8 @@ python src/main_browserbase.py --config competitor_config.yaml
 - **Update URLs regularly**: Restaurant listing URLs can change over time
 - **Set reasonable date ranges**: Scraping years of reviews can be time-consuming
 - **Run during off-hours**: Websites may be more responsive during non-peak times
-- **Use the Browserbase version**: It's more reliable and less likely to be blocked
+- **Use the enhanced version**: It's more reliable and less likely to be blocked for Yelp
+- **Avoid headless mode**: Running with visible browser windows reduces detection likelihood
 
 ### Avoiding Common Issues
 
@@ -237,10 +351,28 @@ python src/main_browserbase.py --config competitor_config.yaml
 - **Date parsing errors**: If dates aren't recognized correctly, try changing the language setting on the review site
 - **Missing reviews**: Some platforms only show a subset of reviews; consider this in your analysis
 - **Update selectors**: If the scraper stops working, website changes may have broken the selectors
+- **Captcha detection**: If you encounter captchas frequently, enable more anti-bot features
+
+### Recommended Settings for Different Sites
+
+- **Yelp**: Use all anti-bot features (they have the most sophisticated detection)
+  ```bash
+  python src/main.py --enhanced --platform yelp
+  ```
+
+- **TripAdvisor**: Can use basic anti-bot features
+  ```bash
+  python src/main.py --enhanced --platform tripadvisor
+  ```
+
+- **Google**: Standard scraping usually works fine
+  ```bash
+  python src/main.py --platform google
+  ```
 
 ### Incremental Scraping
 
-The new date range prompting feature makes incremental scraping easier:
+The date range prompting feature makes incremental scraping easier:
 
 1. Run the scraper whenever you want new reviews
 2. The scraper will detect the most recent review date in your existing Excel file
@@ -260,6 +392,18 @@ The new date range prompting feature makes incremental scraping easier:
 - Check your Browserbase API key
 - Verify your internet connection
 - Try again in a few minutes
+
+### Error: "Bot detection encountered"
+
+- Try running with enhanced anti-bot features:
+  ```
+  python src/main.py --enhanced
+  ```
+- Disable headless mode:
+  ```
+  # Don't add --headless flag
+  ```
+- Try reducing the number of reviews you're scraping at once
 
 ### Error: "No reviews found"
 
