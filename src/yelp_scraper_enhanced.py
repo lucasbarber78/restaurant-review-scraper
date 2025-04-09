@@ -79,7 +79,7 @@ class EnhancedYelpScraper:
         retry=retry_if_exception_type(Exception)
     )
     async def _navigate_to_reviews_page(self):
-        """Navigate to the reviews page with anti-bot measures."""
+        """Navigate to the Yelp page and find the reviews section."""
         logger.info(f"Navigating to Yelp URL: {self.url}")
         
         # Use randomized delay for navigation
@@ -94,20 +94,39 @@ class EnhancedYelpScraper:
         if self.simulate_human and self.stealth_enhancer:
             await self.stealth_enhancer.simulate_human_behavior(self.page)
         
-        # Wait for reviews to load with random delay
+        # Wait for the page to load fully
+        if self.use_random_delays:
+            timeout_with_jitter = self.timeout * (1 + random.uniform(-0.1, 0.2))
+        else:
+            timeout_with_jitter = self.timeout
+        
+        # Wait for reviews to load
         try:
-            if self.use_random_delays:
-                timeout_with_jitter = self.timeout * (1 + random.uniform(-0.1, 0.2))
-            else:
-                timeout_with_jitter = self.timeout
-                
             await self.page.waitForSelector('div.review', timeout=timeout_with_jitter * 1000)
-            
+            logger.info("Reviews section loaded successfully")
         except Exception as e:
-            logger.warning(f"Error waiting for reviews: {e}")
+            logger.warning(f"Error waiting for reviews to load: {e}")
+            
             # Take screenshot for debugging
             await self.page.screenshot({'path': 'debug_yelp_navigation.png'})
-            raise
+            
+            # Check if we need to navigate to reviews section specifically
+            try:
+                # Look for reviews tab or link
+                review_links = await self.page.querySelectorAll('a[href*="reviews"], span:has-text("Reviews")')
+                if len(review_links) > 0:
+                    # Click the first reviews link
+                    if self.use_random_delays:
+                        delay_between_actions("click")
+                    
+                    await review_links[0].click()
+                    logger.info("Clicked on reviews tab/link")
+                    
+                    # Wait for reviews to load after click
+                    await self.page.waitForSelector('div.review', timeout=timeout_with_jitter * 1000)
+            except Exception as e2:
+                logger.warning(f"Error navigating to reviews section: {e2}")
+                raise
     
     async def _handle_cookies_popup(self):
         """Handle cookie consent popups with human-like behavior."""
@@ -118,7 +137,9 @@ class EnhancedYelpScraper:
                 'button[id*="onetrust-accept"]',
                 'button[id*="accept-cookies"]',
                 'button[class*="cookie-consent"]',
-                'button[aria-label*="Accept"]'
+                'button[aria-label*="Accept"]',
+                'button:has-text("Accept All Cookies")',
+                'button:has-text("Accept Cookies")'
             ]
             
             for selector in cookie_buttons:
@@ -140,19 +161,23 @@ class EnhancedYelpScraper:
         except Exception as e:
             logger.warning(f"Error handling cookie popup: {e}")
     
-    async def _handle_signin_popup(self):
-        """Handle sign-in pop-ups that might appear."""
+    async def _handle_popups(self):
+        """Handle various popups that might appear during scraping."""
         try:
-            # Check for the sign-in modal
-            close_buttons = [
+            # Check for sign-in prompts
+            signin_close_buttons = [
                 'button.ybtn.ybtn--secondary',  # "Close" button
                 'button[aria-label="Close"]',
                 'button.dismiss-link',
                 'button.close-modal',
-                '.login-form-container .close-button'
+                '.login-form-container .close-button',
+                'button:has-text("Maybe Later")',
+                'button:has-text("Close")',
+                'button:has-text("Skip")',
+                'button:has-text("No Thanks")'
             ]
             
-            for selector in close_buttons:
+            for selector in signin_close_buttons:
                 try:
                     button = await self.page.querySelector(selector)
                     if button:
@@ -161,55 +186,97 @@ class EnhancedYelpScraper:
                             delay_between_actions("click")
                             
                         await button.click()
-                        logger.info("Closed sign-in popup")
+                        logger.info("Closed sign-in/promotional popup")
                         
                         # Add post-click delay
                         await self.page.waitForTimeout(get_random_delay(1.0, 0.3) * 1000)
                         break
                 except Exception:
                     continue
+                    
+            # Check for app download banners
+            app_close_buttons = [
+                'button.app-banner_close',
+                'button[aria-label="Close app banner"]',
+                'button[data-testid="app-download-close"]'
+            ]
+            
+            for selector in app_close_buttons:
+                try:
+                    button = await self.page.querySelector(selector)
+                    if button:
+                        if self.use_random_delays:
+                            delay_between_actions("click")
+                            
+                        await button.click()
+                        logger.info("Closed app download banner")
+                        
+                        if self.use_random_delays:
+                            await self.page.waitForTimeout(get_random_delay(1.0, 0.3) * 1000)
+                        break
+                except Exception:
+                    continue
+                    
         except Exception as e:
-            logger.warning(f"Error handling sign-in popup: {e}")
+            logger.warning(f"Error handling popups: {e}")
     
     async def _filter_reviews(self):
-        """Sort reviews by newest first with human-like interaction."""
+        """Sort reviews with human-like interaction."""
         try:
-            # Use randomized delay before sorting
+            # Use randomized delay before filtering
             if self.use_random_delays:
                 delay_between_actions("click")
             
             # Open the sort dropdown
-            sort_button = await self.page.querySelector('button[aria-controls*="sort-by-dropdown"]')
-            if sort_button:
-                await sort_button.click()
-                
-                # Randomized waiting time
-                if self.use_random_delays:
-                    await self.page.waitForTimeout(get_random_delay(1.0, 0.3) * 1000)
-                else:
-                    await self.page.waitForTimeout(1000)
-                
-                # Click on "Newest First" option
-                newest_option = await self.page.querySelector('li[role="option"] button:has-text("Newest First")')
-                if newest_option:
-                    # Add another small delay for human-like behavior
+            sort_dropdown_selectors = [
+                'button[aria-controls*="sort-by-dropdown"]',
+                'button.dropdown_toggle--sort',
+                'button:has-text("Sort by:")'
+            ]
+            
+            for selector in sort_dropdown_selectors:
+                sort_dropdown = await self.page.querySelector(selector)
+                if sort_dropdown:
+                    # Add delay before clicking
                     if self.use_random_delays:
                         delay_between_actions("click")
                         
-                    await newest_option.click()
-                    logger.info("Sorted reviews by newest first")
+                    await sort_dropdown.click()
+                    logger.info("Clicked sort dropdown")
                     
-                    # Wait for reviews to reload with variability
-                    if self.use_random_delays:
-                        await self.page.waitForTimeout(get_random_delay(2.0, 0.5) * 1000)
-                    else:
-                        await self.page.waitForTimeout(2000)
+                    # Wait for dropdown to appear
+                    await self.page.waitForTimeout(get_random_delay(1.0, 0.3) * 1000)
                     
-                    # Verify that sort was applied
-                    current_sort = await self.page.querySelector('button[aria-controls*="sort-by-dropdown"] span')
-                    current_sort_text = await self.page.evaluate('el => el.textContent', current_sort)
-                    if 'Newest First' not in current_sort_text:
-                        logger.warning("Failed to sort by newest first")
+                    # Find and click "Newest First" option
+                    newest_option_selectors = [
+                        'li[role="option"] button:has-text("Newest First")',
+                        'a:has-text("Newest First")',
+                        'span:has-text("Newest First")'
+                    ]
+                    
+                    for option_selector in newest_option_selectors:
+                        newest_option = await self.page.querySelector(option_selector)
+                        if newest_option:
+                            if self.use_random_delays:
+                                delay_between_actions("click")
+                                
+                            await newest_option.click()
+                            logger.info("Selected newest first sorting")
+                            
+                            # Wait for reviews to reload
+                            if self.use_random_delays:
+                                await self.page.waitForTimeout(get_random_delay(2.0, 0.5) * 1000)
+                            else:
+                                await self.page.waitForTimeout(2000)
+                            
+                            # Verify that sort was applied
+                            current_sort = await self.page.querySelector('button[aria-controls*="sort-by-dropdown"] span, button.dropdown_toggle--sort span')
+                            if current_sort:
+                                current_sort_text = await self.page.evaluate('el => el.textContent', current_sort)
+                                if 'Newest First' not in current_sort_text:
+                                    logger.warning("Failed to sort by newest first")
+                            break
+                    break
         except Exception as e:
             logger.warning(f"Error applying review filters: {e}")
     
@@ -258,14 +325,14 @@ class EnhancedYelpScraper:
                 await self.page.waitForTimeout(self.scroll_pause_time * 1000)
             
             # Click "More" buttons if they exist to expand review text
-            more_buttons = await self.page.querySelectorAll('button.css-1i7i0ah')
+            more_buttons = await self.page.querySelectorAll('button.css-1i7i0ah, button:has-text("more"), a.read-more-link')
             
             # Only click a random subset of "More" buttons to appear human-like
             if self.simulate_human and len(more_buttons) > 0:
                 # Randomly select only some buttons to click
                 buttons_to_click = random.sample(
                     more_buttons, 
-                    min(len(more_buttons), random.randint(1, 3))
+                    min(len(more_buttons), random.randint(1, min(3, len(more_buttons))))
                 )
                 
                 for button in buttons_to_click:
@@ -314,24 +381,39 @@ class EnhancedYelpScraper:
             if current_height == previous_height:
                 # Try to click "Next" pagination button if it exists
                 try:
-                    next_button = await self.page.querySelector('a.next-link')
-                    if next_button:
-                        if self.use_random_delays:
-                            delay_between_actions("click")
+                    next_button_selectors = [
+                        'a.next-link', 
+                        'a.pagination-link.next', 
+                        'a[href*="&start="]',
+                        'a.next_page',
+                        'a[aria-label="Next page"]'
+                    ]
+                    
+                    for selector in next_button_selectors:
+                        next_button = await self.page.querySelector(selector)
+                        if next_button:
+                            # Add human-like delay before clicking
+                            if self.use_random_delays:
+                                delay_between_actions("click")
+                                
+                            await next_button.click()
+                            logger.info("Clicked to next page of reviews")
                             
-                        await next_button.click()
-                        logger.info("Clicked to next page of reviews")
-                        
-                        # Wait for page to load
-                        if self.use_random_delays:
-                            await self.page.waitForTimeout(get_random_delay(3.0, 0.5) * 1000)
-                        else:
-                            await self.page.waitForTimeout(3000)
+                            # Wait for page to load
+                            if self.use_random_delays:
+                                await self.page.waitForTimeout(get_random_delay(3.0, 0.5) * 1000)
+                            else:
+                                await self.page.waitForTimeout(3000)
+                            
+                            # Reset stall count when moving to a new page
+                            stall_count = 0
+                            break
                     else:
-                        # No more pages to load
+                        # No next page button found
+                        logger.info("No 'next page' button found, reached end of reviews")
                         break
-                except Exception:
-                    # No more pages to load
+                except Exception as e:
+                    logger.debug(f"Error clicking next page: {e}")
                     break
                     
             previous_height = current_height
@@ -352,7 +434,7 @@ class EnhancedYelpScraper:
                     # In a production environment, you would apply new proxy settings here
     
     async def _extract_review_data(self):
-        """Extract data from loaded reviews."""
+        """Extract data from loaded Yelp reviews."""
         logger.info("Extracting review data from Yelp...")
         
         reviews = []
@@ -367,20 +449,43 @@ class EnhancedYelpScraper:
                 
                 # Extract review date
                 date_element = await review_element.querySelector('span.css-chan6m')
+                if not date_element:
+                    # Try alternative selectors
+                    date_element = await review_element.querySelector('.rating-qualifier')
+                    if not date_element:
+                        date_element = await review_element.querySelector('span:has-text("/")')
+                
                 date_text = await self.page.evaluate('el => el.textContent', date_element) if date_element else ""
+                date_text = date_text.strip()
                 
                 # Parse the date
                 try:
                     review_date = parser.parse(date_text, fuzzy=True)
                 except ValueError:
-                    # Handle relative dates like "yesterday", "a week ago", etc.
+                    # Handle relative dates like "a month ago", "a week ago", etc.
                     current_date = datetime.now()
-                    if 'yesterday' in date_text.lower():
-                        review_date = current_date.replace(day=current_date.day-1)
-                    elif 'week ago' in date_text.lower():
-                        review_date = current_date.replace(day=current_date.day-7)
-                    elif 'month ago' in date_text.lower():
-                        review_date = current_date.replace(month=current_date.month-1)
+                    if 'day ago' in date_text.lower() or 'days ago' in date_text.lower():
+                        days_ago = re.search(r'(\d+)\s+day', date_text.lower())
+                        days = 1 if not days_ago else int(days_ago.group(1))
+                        review_date = current_date.replace(day=current_date.day-days)
+                    elif 'week ago' in date_text.lower() or 'weeks ago' in date_text.lower():
+                        weeks_ago = re.search(r'(\d+)\s+week', date_text.lower())
+                        weeks = 1 if not weeks_ago else int(weeks_ago.group(1))
+                        review_date = current_date.replace(day=current_date.day-(weeks*7))
+                    elif 'month ago' in date_text.lower() or 'months ago' in date_text.lower():
+                        months_ago = re.search(r'(\d+)\s+month', date_text.lower())
+                        months = 1 if not months_ago else int(months_ago.group(1))
+                        # Handle month rollover
+                        new_month = current_date.month - months
+                        if new_month <= 0:
+                            new_month = 12 + new_month
+                            review_date = current_date.replace(year=current_date.year-1, month=new_month)
+                        else:
+                            review_date = current_date.replace(month=new_month)
+                    elif 'year ago' in date_text.lower() or 'years ago' in date_text.lower():
+                        years_ago = re.search(r'(\d+)\s+year', date_text.lower())
+                        years = 1 if not years_ago else int(years_ago.group(1))
+                        review_date = current_date.replace(year=current_date.year-years)
                     else:
                         # Default to current date if parsing fails
                         review_date = current_date
@@ -391,21 +496,41 @@ class EnhancedYelpScraper:
                 
                 # Extract reviewer name
                 name_element = await review_element.querySelector('a.css-1m051bw')
+                if not name_element:
+                    name_element = await review_element.querySelector('.user-passport-info .user-display-name')
+                    if not name_element:
+                        name_element = await review_element.querySelector('a[href*="/user_details"]')
+                
                 reviewer_name = await self.page.evaluate('el => el.textContent', name_element) if name_element else "Anonymous"
                 
                 # Extract rating
                 rating_element = await review_element.querySelector('div[role="img"][aria-label*="star rating"]')
-                rating_text = await self.page.evaluate('el => el.getAttribute("aria-label")', rating_element) if rating_element else ""
-                rating_match = re.search(r'(\d+(\.\d+)?) star', rating_text)
-                rating = float(rating_match.group(1)) if rating_match else 0
+                if not rating_element:
+                    rating_element = await review_element.querySelector('.i-stars')
+                
+                rating = 0  # Default value
+                if rating_element:
+                    rating_text = await self.page.evaluate('el => el.getAttribute("aria-label")', rating_element)
+                    if rating_text:
+                        rating_match = re.search(r'(\d+(\.\d+)?) star', rating_text)
+                        if rating_match:
+                            rating = float(rating_match.group(1))
+                    else:
+                        # Try to get rating from class
+                        rating_class = await self.page.evaluate('el => el.className', rating_element)
+                        star_match = re.search(r'stars_(\d+)', rating_class)
+                        if star_match:
+                            rating = float(star_match.group(1)) / 10
                 
                 # Extract review text
                 text_element = await review_element.querySelector('span.raw__09f24__T4Ezm')
+                if not text_element:
+                    text_element = await review_element.querySelector('p.comment')
+                    if not text_element:
+                        text_element = await review_element.querySelector('.review-content p')
+                
                 review_text = await self.page.evaluate('el => el.textContent', text_element) if text_element else ""
                 review_text = review_text.strip()
-                
-                # Look for a review title (Yelp doesn't always have titles)
-                title = ""
                 
                 # Create review object
                 review = {
@@ -413,7 +538,6 @@ class EnhancedYelpScraper:
                     'reviewer_name': reviewer_name.strip(),
                     'date': review_date.strftime('%Y-%m-%d'),
                     'rating': rating,
-                    'title': title,
                     'text': review_text,
                     'url': self.url,
                     'raw_date': date_text
@@ -544,12 +668,61 @@ class EnhancedYelpScraper:
                 'height': 768
             })
             
+            # Set a custom user agent to avoid detection
+            # Use a recent desktop user agent
+            await self.page.setUserAgent(
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            )
+            
             # Apply stealth measures if enabled
             if self.use_stealth_plugins and self.stealth_enhancer:
                 await self.stealth_enhancer.enhance_browser(self.page)
             
             # Set timeout
             await self.page.setDefaultNavigationTimeout(self.timeout * 1000)
+            
+            # Additional modifications to avoid detection
+            await self.page.evaluateOnNewDocument("""
+                () => {
+                    // Overwrite the navigator properties
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => false
+                    });
+                    
+                    // Overwrite Permissions API
+                    if (window.Permissions && window.Permissions.prototype.query) {
+                        const originalQuery = window.Permissions.prototype.query;
+                        window.Permissions.prototype.query = (parameters) => {
+                            return Promise.resolve({state: "granted", onchange: null});
+                        };
+                    }
+                    
+                    // Overwrite plugins
+                    Object.defineProperty(navigator, 'plugins', {
+                        get: () => {
+                            return [1, 2, 3, 4, 5];
+                        }
+                    });
+                    
+                    // Pass Chrome notification check
+                    window.chrome = {
+                        runtime: {}
+                    };
+                    
+                    // Prevent iframe detection
+                    Object.defineProperty(window, 'parent', {
+                        get: () => window
+                    });
+                    
+                    // Yelp-specific anti-detection
+                    // Hide that we're using puppeteer
+                    delete window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+                    
+                    // Add missing properties that Yelp might check
+                    if (!window.screenX) window.screenX = 0;
+                    if (!window.screenY) window.screenY = 0;
+                }
+            """)
             
             logger.info("Browser initialized with anti-detection measures")
             return True
@@ -572,8 +745,8 @@ class EnhancedYelpScraper:
             # Handle any cookie popups
             await self._handle_cookies_popup()
             
-            # Handle any sign-in popups
-            await self._handle_signin_popup()
+            # Handle any other popups
+            await self._handle_popups()
             
             # Sort reviews by newest first if possible
             await self._filter_reviews()
@@ -634,7 +807,15 @@ class EnhancedYelpScraper:
         return reviews
     
     def _save_to_csv(self, reviews, filepath=None):
-        """Save reviews to a CSV file."""
+        """Save reviews to a CSV file.
+        
+        Args:
+            reviews (list): List of review dictionaries.
+            filepath (str, optional): Path to save the CSV file. Defaults to None.
+            
+        Returns:
+            str: Path to the saved CSV file or None if save failed.
+        """
         import csv
         from pathlib import Path
         
